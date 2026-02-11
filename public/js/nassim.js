@@ -340,16 +340,20 @@ const Nassim = {
     // Base score from percent positive (0-100 range)
     let score = pctPositive;
 
-    // Adjust based on classification
+    // Classification adjustments — never override fundamentals
+    // A decision with <50% positive outcomes should NEVER score above 60
     if (cls === 'ANTIFRAGILE') {
-      score = Math.max(score, 80); // At least 80 for antifragile
-      score = Math.min(100, score + confidence * 10);
+      // Bonus for benefiting from chaos, but capped by actual positive rate
+      score = Math.min(100, score + confidence * 15);
     } else if (cls === 'ROBUST') {
-      // Boost robust decisions slightly
       score = Math.min(100, score + confidence * 5);
     } else if (cls === 'FRAGILE') {
-      // Penalize fragile decisions
       score = Math.max(0, score - confidence * 10);
+    }
+
+    // Hard ceiling: if fewer than 50% of futures are positive, cap at 55
+    if (pctPositive < 50) {
+      score = Math.min(score, 55);
     }
 
     // Clamp to 0-100
