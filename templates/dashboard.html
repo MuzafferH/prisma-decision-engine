@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRISMA — Decision Intelligence Dashboard</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    /* === RESET & BASE === */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0f;
+      color: #e8e8f0;
+      line-height: 1.6;
+      padding: 24px;
+      overflow-x: hidden;
+    }
+
+    /* === LAYOUT === */
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .card {
+      background: #12121a;
+      border: 1px solid #2a2a3a;
+      border-radius: 12px;
+      padding: 32px;
+      box-shadow: 0 0 20px rgba(79, 195, 247, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      background: #1a1a28;
+      box-shadow: 0 0 30px rgba(79, 195, 247, 0.08);
+    }
+
+    /* === TYPOGRAPHY === */
+    h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      background: linear-gradient(135deg, #4fc3f7 0%, #b388ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 16px;
+      text-shadow: 0 0 30px rgba(79, 195, 247, 0.3);
+    }
+
+    h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      margin-bottom: 8px;
+      color: #e8e8f0;
+      text-shadow: 0 0 15px rgba(79, 195, 247, 0.2);
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #e8e8f0;
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      color: #8888a0;
+      font-size: 0.95rem;
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #e8e8f0;
+      margin-bottom: 8px;
+      text-shadow: 0 0 10px rgba(79, 195, 247, 0.15);
+    }
+
+    /* === HEADER === */
+    .header {
+      text-align: center;
+      padding: 40px 0;
+    }
+
+    .header h1 {
+      font-size: 4rem;
+      margin-bottom: 8px;
+    }
+
+    .decision-title {
+      font-size: 1.5rem;
+      color: #e8e8f0;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .tier-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: rgba(79, 195, 247, 0.15);
+      border: 1px solid #4fc3f7;
+      border-radius: 20px;
+      color: #4fc3f7;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      box-shadow: 0 0 15px rgba(79, 195, 247, 0.3);
+      margin-bottom: 16px;
+    }
+
+    .tagline {
+      font-size: 1.1rem;
+      color: #8888a0;
+      font-weight: 400;
+      margin-top: 12px;
+    }
+
+    /* === CANVAS & VISUALIZATIONS === */
+    canvas {
+      display: block;
+      width: 100%;
+      border-radius: 8px;
+      background: rgba(10, 10, 15, 0.5);
+      margin-bottom: 16px;
+    }
+
+    .chart-container {
+      width: 100%;
+      margin-bottom: 16px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    /* === FEEDBACK LOOP CALLOUT === */
+    .feedback-callout {
+      background: rgba(239, 83, 80, 0.1);
+      border-left: 4px solid #ef5350;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin-top: 16px;
+      box-shadow: 0 0 15px rgba(239, 83, 80, 0.15);
+    }
+
+    .feedback-callout h4 {
+      color: #ef5350;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+
+    .feedback-callout p {
+      color: #e8e8f0;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    /* === SCENARIO STATS === */
+    .scenario-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .stat-card {
+      background: rgba(18, 18, 26, 0.8);
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      padding: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      background: rgba(26, 26, 40, 0.9);
+      border-color: #4fc3f7;
+    }
+
+    .stat-card h4 {
+      font-size: 0.85rem;
+      color: #8888a0;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .stat-card .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #e8e8f0;
+    }
+
+    .stat-card .value.positive {
+      color: #4caf50;
+    }
+
+    .stat-card .value.negative {
+      color: #ef5350;
+    }
+
+    .stat-card .value.uncertain {
+      color: #ffa726;
+    }
+
+    /* === TALEB BADGES === */
+    .taleb-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 16px;
+    }
+
+    .taleb-card {
+      background: rgba(18, 18, 26, 0.8);
+      border: 1px solid #2a2a3a;
+      border-radius: 12px;
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .taleb-card.fragile {
+      border-color: #ef5350;
+      box-shadow: 0 0 15px rgba(239, 83, 80, 0.3);
+    }
+
+    .taleb-card.robust {
+      border-color: #4caf50;
+      box-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
+    }
+
+    .taleb-card.antifragile {
+      border-color: #ab47bc;
+      box-shadow: 0 0 15px rgba(171, 71, 188, 0.3);
+    }
+
+    .taleb-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .taleb-badge {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .taleb-badge.fragile {
+      background: rgba(239, 83, 80, 0.2);
+      color: #ef5350;
+      border: 1px solid #ef5350;
+    }
+
+    .taleb-badge.robust {
+      background: rgba(76, 175, 80, 0.2);
+      color: #4caf50;
+      border: 1px solid #4caf50;
+    }
+
+    .taleb-badge.antifragile {
+      background: rgba(171, 71, 188, 0.2);
+      color: #ab47bc;
+      border: 1px solid #ab47bc;
+    }
+
+    .taleb-card h3 {
+      color: #e8e8f0;
+      margin-bottom: 12px;
+      font-size: 1.2rem;
+    }
+
+    .taleb-card .percent {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .taleb-card .reasoning {
+      color: #8888a0;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    /* === RECOMMENDATION CARDS === */
+    .recommendations {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 16px;
+    }
+
+    .rec-card {
+      background: rgba(18, 18, 26, 0.8);
+      border-radius: 12px;
+      padding: 24px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .rec-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+    }
+
+    .rec-card.action::before {
+      background: #4caf50;
+      box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    }
+
+    .rec-card.watch::before {
+      background: #ffa726;
+      box-shadow: 0 0 10px rgba(255, 167, 38, 0.5);
+    }
+
+    .rec-card.trigger::before {
+      background: #4fc3f7;
+      box-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+    }
+
+    .rec-card:hover {
+      background: rgba(26, 26, 40, 0.9);
+      transform: translateY(-4px);
+    }
+
+    .rec-card h3 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 16px;
+      font-weight: 700;
+    }
+
+    .rec-card.action h3 {
+      color: #4caf50;
+    }
+
+    .rec-card.watch h3 {
+      color: #ffa726;
+    }
+
+    .rec-card.trigger h3 {
+      color: #4fc3f7;
+    }
+
+    .rec-card p {
+      color: #e8e8f0;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* === INTERACTIVE SLIDERS === */
+    .sliders-container {
+      margin-top: 16px;
+    }
+
+    .slider-group {
+      margin-bottom: 24px;
+      padding: 20px;
+      background: rgba(10, 10, 15, 0.5);
+      border-radius: 8px;
+      border: 1px solid #2a2a3a;
+      transition: all 0.3s ease;
+    }
+
+    .slider-group:hover {
+      border-color: #4fc3f7;
+      background: rgba(18, 18, 26, 0.6);
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .slider-label span {
+      color: #e8e8f0;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .slider-value {
+      color: #4fc3f7;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: #2a2a3a;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      background: #4fc3f7;
+      cursor: pointer;
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+      transition: all 0.2s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      width: 22px;
+      height: 22px;
+      box-shadow: 0 0 15px rgba(79, 195, 247, 0.8);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      background: #4fc3f7;
+      cursor: pointer;
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+      border: none;
+      transition: all 0.2s ease;
+    }
+
+    input[type="range"]::-moz-range-thumb:hover {
+      width: 22px;
+      height: 22px;
+      box-shadow: 0 0 15px rgba(79, 195, 247, 0.8);
+    }
+
+    /* === DISCOVERIES === */
+    .discoveries-container {
+      margin-top: 16px;
+      display: none; /* Hidden by default, shown when discoveries exist */
+    }
+
+    .discoveries-container.has-discoveries {
+      display: block;
+    }
+
+    .discovery-card {
+      background: rgba(10, 10, 15, 0.5);
+      border-left: 4px solid #4fc3f7;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .discovery-card.high-impact {
+      border-left-color: #ef5350;
+      background: rgba(239, 83, 80, 0.05);
+    }
+
+    .discovery-card.medium-impact {
+      border-left-color: #ffa726;
+      background: rgba(255, 167, 38, 0.05);
+    }
+
+    .discovery-card:hover {
+      background: rgba(18, 18, 26, 0.6);
+      transform: translateX(4px);
+    }
+
+    .discovery-card h4 {
+      color: #e8e8f0;
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .discovery-card p {
+      color: #8888a0;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .discovery-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 8px;
+    }
+
+    .discovery-badge.risk {
+      background: rgba(239, 83, 80, 0.2);
+      color: #ef5350;
+    }
+
+    .discovery-badge.opportunity {
+      background: rgba(76, 175, 80, 0.2);
+      color: #4caf50;
+    }
+
+    .discovery-badge.pattern {
+      background: rgba(79, 195, 247, 0.2);
+      color: #4fc3f7;
+    }
+
+    /* === FOOTER === */
+    .footer {
+      text-align: center;
+      padding: 40px 0;
+      color: #8888a0;
+      font-size: 0.9rem;
+    }
+
+    .footer .tagline {
+      font-size: 1.1rem;
+      color: #e8e8f0;
+      margin-bottom: 8px;
+    }
+
+    .footer .credits {
+      font-size: 0.85rem;
+      color: #6666a0;
+    }
+
+    /* === LOADING STATE === */
+    .loading {
+      text-align: center;
+      padding: 60px 0;
+      font-size: 1.2rem;
+      color: #4fc3f7;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 768px) {
+      .header h1 {
+        font-size: 2.5rem;
+      }
+
+      .recommendations {
+        grid-template-columns: 1fr;
+      }
+
+      .taleb-container {
+        grid-template-columns: 1fr;
+      }
+
+      .scenario-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+
+    <!-- === HEADER === -->
+    <div class="header">
+      <h1>PRISMA</h1>
+      <div class="decision-title" id="decision-title">Loading Decision...</div>
+      <div class="tier-badge" id="tier-badge">Tier 1</div>
+      <div class="tagline">1,000 futures. One decision.</div>
+      <div class="subtitle" id="decision-summary"></div>
+    </div>
+
+    <!-- === CAUSAL GRAPH SECTION === -->
+    <div class="card">
+      <h2 class="section-title">How Your Business Connects</h2>
+      <p class="subtitle">The variables that matter and how they affect each other</p>
+      <canvas id="causal-graph" width="1200" height="400"></canvas>
+      <div class="feedback-callout" id="feedback-loop-callout" style="display: none;">
+        <h4>⚠️ Feedback Loop Detected</h4>
+        <p id="feedback-loop-description"></p>
+      </div>
+    </div>
+
+    <!-- === MONTE CARLO SECTION === -->
+    <div class="card">
+      <h2 class="section-title">1,000 Possible Futures</h2>
+      <p class="subtitle">Carlo is exploring your scenarios...</p>
+      <canvas id="monte-carlo-canvas" width="1200" height="350"></canvas>
+      <div class="scenario-stats" id="scenario-stats"></div>
+    </div>
+
+    <!-- === SCENARIO COMPARISON SECTION === -->
+    <div class="card">
+      <h2 class="section-title">Scenario Comparison</h2>
+      <p class="subtitle">See how each option stacks up</p>
+      <div id="scenario-compare" class="chart-container"></div>
+    </div>
+
+    <!-- === TALEB CLASSIFICATION SECTION === -->
+    <div class="card">
+      <h2 class="section-title">Nassim's Verdict</h2>
+      <p class="subtitle">Is your decision fragile, robust, or antifragile?</p>
+      <div id="taleb-badges" class="taleb-container"></div>
+    </div>
+
+    <!-- === SENSITIVITY SECTION === -->
+    <div class="card">
+      <h2 class="section-title">What Matters Most</h2>
+      <p class="subtitle">If you could only control one thing, focus here.</p>
+      <div id="tornado-chart" class="chart-container"></div>
+    </div>
+
+    <!-- === MARKOV TIMELINE SECTION === -->
+    <div class="card" id="markov-section" style="display: none;">
+      <h2 class="section-title">Markov Looks Ahead</h2>
+      <p class="subtitle">6 months from now...</p>
+      <div id="markov-timeline" class="chart-container"></div>
+    </div>
+
+    <!-- === INTERACTIVE SLIDERS SECTION === -->
+    <div class="card">
+      <h2 class="section-title">What If...?</h2>
+      <p class="subtitle">Drag to explore. Carlo re-runs instantly.</p>
+      <div id="sliders-container" class="sliders-container"></div>
+    </div>
+
+    <!-- === RECOMMENDATION SECTION === -->
+    <div class="card">
+      <h2 class="section-title">What To Do</h2>
+      <div class="recommendations">
+        <div class="rec-card action">
+          <h3>What To Do</h3>
+          <p id="rec-action">Loading recommendation...</p>
+        </div>
+        <div class="rec-card watch">
+          <h3>What To Watch</h3>
+          <p id="rec-watch">Loading metrics...</p>
+        </div>
+        <div class="rec-card trigger">
+          <h3>When To Change Your Mind</h3>
+          <p id="rec-trigger">Loading triggers...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- === DISCOVERIES SECTION === -->
+    <div class="card">
+      <h2 class="section-title">Hidden Insights</h2>
+      <p class="subtitle">What the data revealed that you didn't ask about</p>
+      <div id="discoveries-container" class="discoveries-container"></div>
+    </div>
+
+    <!-- === FOOTER === -->
+    <div class="footer">
+      <div class="tagline">Prisma — See the full spectrum.</div>
+      <div class="credits">Built with Opus 4.6 | Claude Code Hackathon 2026</div>
+    </div>
+
+  </div>
+
+  <!-- === PRISMA DATA INJECTION === -->
+  <script>
+    // === PRISMA DATA INJECTION POINT ===
+    // This object will be replaced by Opus 4.6 with actual scenario data
+    window.PRISMA_DATA = /* PRISMA_DATA_INJECT */null;
+
+    // === FALLBACK TEST DATA ===
+    if (!window.PRISMA_DATA) {
+      window.PRISMA_DATA = {
+        meta: {
+          title: "Sample Decision: Fleet Expansion",
+          summary: "Testing dashboard layout with sample data",
+          tier: 1,
+          generatedAt: new Date().toISOString()
+        },
+        variables: [
+          { id: "drivers", label: "Driver Count", value: 5, min: 3, max: 8, distribution: "fixed", unit: "drivers", isInput: false },
+          { id: "deliveries", label: "Daily Deliveries", value: 80, min: 60, max: 110, distribution: "right_skewed", unit: "deliveries/day", isInput: true },
+          { id: "reliability", label: "Driver Reliability", value: 0.77, min: 0.5, max: 0.95, distribution: "normal", unit: "%", isInput: false }
+        ],
+        edges: [
+          { from: "drivers", to: "reliability", effect: "positive", strength: 0.7 },
+          { from: "reliability", to: "deliveries", effect: "positive", strength: 0.8 }
+        ],
+        feedbackLoops: [
+          {
+            path: ["reliability", "deliveries", "reliability"],
+            type: "negative",
+            label: "Burnout cycle: low reliability → fewer deliveries → more pressure"
+          }
+        ],
+        scenarios: [
+          { id: "hire", label: "Hire 2 Drivers", color: "#4caf50" },
+          { id: "optimize", label: "Optimize Routes", color: "#ffa726" },
+          { id: "nothing", label: "Do Nothing", color: "#ef5350" }
+        ],
+        outcome: {
+          id: "profit_delta",
+          label: "Monthly Profit Change",
+          unit: "€/month",
+          positiveLabel: "Profit Gain",
+          negativeLabel: "Profit Loss"
+        },
+        recommendation: {
+          action: "Sample action: Consider hiring additional drivers to reduce workload pressure.",
+          watch: "Sample watch: Monitor driver overtime hours and delivery completion rates.",
+          trigger: "Sample trigger: If overtime exceeds 15 hours per week for 2 consecutive weeks, escalate immediately."
+        },
+        discoveries: [
+          {
+            title: "Sample Discovery: Feedback Loop",
+            description: "The data shows a potential feedback loop between driver reliability and delivery volume that could accelerate problems.",
+            impact: "high",
+            type: "risk"
+          },
+          {
+            title: "Sample Opportunity: Efficiency Gains",
+            description: "Route optimization could yield 15-20% efficiency improvements based on current patterns.",
+            impact: "medium",
+            type: "opportunity"
+          }
+        ]
+      };
+    }
+  </script>
+
+  <!-- === ENGINE PLACEHOLDERS === -->
+  <script>
+    // Carlo, Nassim, and Markov engines will be injected here in Tasks 7-10
+    // For now, empty placeholders
+  </script>
+
+  <!-- === INITIALIZATION SCRIPT === -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!window.PRISMA_DATA) {
+        document.body.textContent = 'No PRISMA_DATA found. Generate data with Claude Code first.';
+        return;
+      }
+
+      const data = window.PRISMA_DATA;
+
+      // === INITIALIZE HEADER ===
+      document.getElementById('decision-title').textContent = data.meta.title;
+      document.getElementById('decision-summary').textContent = data.meta.summary;
+      document.getElementById('tier-badge').textContent = 'Tier ' + data.meta.tier;
+
+      // === INITIALIZE FEEDBACK LOOP CALLOUT ===
+      if (data.feedbackLoops && data.feedbackLoops.length > 0) {
+        const callout = document.getElementById('feedback-loop-callout');
+        const description = document.getElementById('feedback-loop-description');
+        callout.style.display = 'block';
+        description.textContent = data.feedbackLoops[0].label;
+      }
+
+      // === INITIALIZE RECOMMENDATIONS ===
+      if (data.recommendation) {
+        document.getElementById('rec-action').textContent = data.recommendation.action;
+        document.getElementById('rec-watch').textContent = data.recommendation.watch;
+        document.getElementById('rec-trigger').textContent = data.recommendation.trigger;
+      }
+
+      // === INITIALIZE DISCOVERIES ===
+      if (data.discoveries && data.discoveries.length > 0) {
+        const container = document.getElementById('discoveries-container');
+        container.classList.add('has-discoveries');
+        data.discoveries.forEach(discovery => {
+          const card = document.createElement('div');
+          card.className = `discovery-card ${discovery.impact}-impact`;
+
+          const title = document.createElement('h4');
+          title.textContent = discovery.title;
+
+          const desc = document.createElement('p');
+          desc.textContent = discovery.description;
+
+          const badge = document.createElement('span');
+          badge.className = `discovery-badge ${discovery.type}`;
+          badge.textContent = discovery.type;
+
+          card.appendChild(title);
+          card.appendChild(desc);
+          card.appendChild(badge);
+          container.appendChild(card);
+        });
+      }
+
+      // === DRAW SAMPLE CAUSAL GRAPH (placeholder) ===
+      const graphCanvas = document.getElementById('causal-graph');
+      const ctx = graphCanvas.getContext('2d');
+      ctx.fillStyle = '#8888a0';
+      ctx.font = '14px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('Causal graph will be rendered here by engines (Task 7-10)', graphCanvas.width / 2, graphCanvas.height / 2);
+
+      // === DRAW SAMPLE MONTE CARLO CANVAS (placeholder) ===
+      const mcCanvas = document.getElementById('monte-carlo-canvas');
+      const mcCtx = mcCanvas.getContext('2d');
+      mcCtx.fillStyle = '#8888a0';
+      mcCtx.font = '14px system-ui';
+      mcCtx.textAlign = 'center';
+      mcCtx.fillText('Monte Carlo simulation (1,000 dots) will be rendered here by Carlo engine', mcCanvas.width / 2, mcCanvas.height / 2);
+
+      // === CREATE SAMPLE SCENARIO STATS ===
+      const statsContainer = document.getElementById('scenario-stats');
+      if (data.scenarios) {
+        data.scenarios.forEach(scenario => {
+          const statCard = document.createElement('div');
+          statCard.className = 'stat-card';
+
+          const heading = document.createElement('h4');
+          heading.textContent = scenario.label;
+
+          const value = document.createElement('div');
+          value.className = 'value positive';
+          value.textContent = '+€1,200';
+
+          const subtitle = document.createElement('div');
+          subtitle.className = 'subtitle';
+          subtitle.textContent = 'Median outcome (placeholder)';
+
+          statCard.appendChild(heading);
+          statCard.appendChild(value);
+          statCard.appendChild(subtitle);
+          statsContainer.appendChild(statCard);
+        });
+      }
+
+      // === CREATE SAMPLE TALEB BADGES ===
+      const talebContainer = document.getElementById('taleb-badges');
+      if (data.scenarios) {
+        const classifications = ['robust', 'antifragile', 'fragile'];
+        data.scenarios.forEach((scenario, i) => {
+          const classification = classifications[i % classifications.length];
+          const card = document.createElement('div');
+          card.className = `taleb-card ${classification}`;
+
+          const badge = document.createElement('div');
+          badge.className = `taleb-badge ${classification}`;
+          badge.textContent = classification.toUpperCase();
+
+          const heading = document.createElement('h3');
+          heading.textContent = scenario.label;
+
+          const percent = document.createElement('div');
+          percent.className = `percent ${classification === 'fragile' ? 'negative' : 'positive'}`;
+          percent.textContent = classification === 'fragile' ? '42%' : '73%';
+
+          const reasoning = document.createElement('div');
+          reasoning.className = 'reasoning';
+          reasoning.textContent = `Sample reasoning: This scenario ${classification === 'fragile' ? 'breaks under stress' : 'survives most outcomes'}.`;
+
+          card.appendChild(badge);
+          card.appendChild(heading);
+          card.appendChild(percent);
+          card.appendChild(reasoning);
+          talebContainer.appendChild(card);
+        });
+      }
+
+      // === CREATE SAMPLE PLOTLY CHARTS ===
+      // Scenario comparison
+      const scenarioData = data.scenarios.map(scenario => ({
+        x: Array.from({length: 100}, () => Math.random() * 5000 - 1000),
+        type: 'box',
+        name: scenario.label,
+        marker: { color: scenario.color }
+      }));
+
+      Plotly.newPlot('scenario-compare', scenarioData, {
+        title: '',
+        xaxis: { title: data.outcome.label, color: '#8888a0' },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#e8e8f0', family: 'system-ui' },
+        margin: { t: 20, b: 60, l: 60, r: 20 }
+      }, { responsive: true });
+
+      // Tornado chart (sensitivity)
+      const tornadoData = [{
+        type: 'bar',
+        orientation: 'h',
+        x: [850, 620, 410, 280, 150],
+        y: ['Driver Reliability', 'Daily Deliveries', 'Fuel Cost', 'Customer Satisfaction', 'Overtime Hours'],
+        marker: {
+          color: ['#ef5350', '#ffa726', '#ffa726', '#4caf50', '#4fc3f7']
+        }
+      }];
+
+      Plotly.newPlot('tornado-chart', tornadoData, {
+        title: '',
+        xaxis: { title: 'Impact on Outcome', color: '#8888a0' },
+        yaxis: { color: '#8888a0' },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#e8e8f0', family: 'system-ui' },
+        margin: { t: 20, b: 60, l: 200, r: 20 }
+      }, { responsive: true });
+
+      // === CREATE SAMPLE SLIDERS ===
+      const slidersContainer = document.getElementById('sliders-container');
+      const inputVariables = data.variables.filter(v => v.isInput);
+
+      if (inputVariables.length > 0) {
+        inputVariables.forEach(variable => {
+          const sliderGroup = document.createElement('div');
+          sliderGroup.className = 'slider-group';
+
+          const labelContainer = document.createElement('div');
+          labelContainer.className = 'slider-label';
+
+          const labelText = document.createElement('span');
+          labelText.textContent = variable.label;
+
+          const valueDisplay = document.createElement('span');
+          valueDisplay.className = 'slider-value';
+          valueDisplay.id = `slider-value-${variable.id}`;
+          valueDisplay.textContent = `${variable.value} ${variable.unit}`;
+
+          labelContainer.appendChild(labelText);
+          labelContainer.appendChild(valueDisplay);
+
+          const slider = document.createElement('input');
+          slider.type = 'range';
+          slider.id = `slider-${variable.id}`;
+          slider.min = variable.min;
+          slider.max = variable.max;
+          slider.value = variable.value;
+          slider.step = (variable.max - variable.min) / 100;
+
+          sliderGroup.appendChild(labelContainer);
+          sliderGroup.appendChild(slider);
+          slidersContainer.appendChild(sliderGroup);
+
+          // Add event listener
+          slider.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            valueDisplay.textContent = `${value.toFixed(1)} ${variable.unit}`;
+            // TODO: Re-run Carlo simulation (will be wired in Task 7)
+          });
+        });
+      } else {
+        const placeholder = document.createElement('p');
+        placeholder.className = 'subtitle';
+        placeholder.textContent = 'No adjustable input variables defined for this decision.';
+        slidersContainer.appendChild(placeholder);
+      }
+
+      // === CHECK FOR MARKOV DATA ===
+      if (data.markov && data.markov.enabled) {
+        document.getElementById('markov-section').style.display = 'block';
+        // Markov timeline will be rendered by Markov engine (Task 10)
+        const markovContainer = document.getElementById('markov-timeline');
+        const placeholder = document.createElement('div');
+        placeholder.style.padding = '60px 20px';
+        placeholder.style.textAlign = 'center';
+        placeholder.style.color = '#8888a0';
+        placeholder.textContent = 'Markov state timeline will be rendered here (Task 10)';
+        markovContainer.appendChild(placeholder);
+      }
+
+      console.log('Prisma Dashboard loaded successfully!');
+      console.log('PRISMA_DATA:', data);
+    });
+  </script>
+</body>
+</html>
