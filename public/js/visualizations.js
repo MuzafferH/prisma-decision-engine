@@ -194,8 +194,24 @@ const Visualizations = {
   },
 
   /**
+   * Ensure each rec card has a .refining-label span.
+   * Called once after initial render or when cards are rebuilt.
+   */
+  _ensureRefiningLabels() {
+    document.querySelectorAll('.rec-card').forEach(card => {
+      if (!card.querySelector('.refining-label')) {
+        const label = document.createElement('span');
+        label.className = 'refining-label';
+        label.textContent = 'refining...';
+        card.appendChild(label);
+      }
+    });
+  },
+
+  /**
    * Render the recommendation triptych (Layer 1)
    * Supports crossfade: fade out current text, swap, fade in — staggered 50ms per card.
+   * Removes the 'refining' shimmer class when rendering AI-refined text.
    * @param {Object} rec - {action, watch, trigger}
    * @param {boolean} [crossfade=false] - If true, animate the transition
    */
@@ -213,10 +229,13 @@ const Visualizations = {
     if (!crossfade) {
       // Instant update (first render)
       cards.forEach(c => { if (c.el) c.el.textContent = c.text; });
+      // Ensure refining-label spans exist for future shimmer use
+      this._ensureRefiningLabels();
       return;
     }
 
     // Crossfade: fade out → swap text → fade in, staggered 50ms per card
+    // Also remove shimmer class from each card as its text arrives
     cards.forEach((c, i) => {
       if (!c.el) return;
       setTimeout(() => {
@@ -224,6 +243,11 @@ const Visualizations = {
         setTimeout(() => {
           c.el.textContent = c.text;
           c.el.classList.remove('fading');
+          // Remove refining shimmer from the parent card when new text is set
+          const card = c.el.closest('.rec-card');
+          if (card) card.classList.remove('refining');
+          // Re-ensure refining-label span exists after text replacement
+          this._ensureRefiningLabels();
         }, 200); // After fade-out completes
       }, i * 50); // Stagger
     });

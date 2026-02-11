@@ -965,10 +965,11 @@ Dashboard.generateDynamicRecommendations = function() {
 
 /**
  * Start the 2s AI refinement debounce timer (live mode only).
- * Cancels any previous pending refinement.
+ * Cancels any previous pending refinement and adds shimmer to rec cards.
  */
 Dashboard._startAIRefinement = function() {
   Dashboard._cancelAIRefinement();
+  Dashboard._setRecCardsRefining(true);
   Dashboard._refineTimeout = setTimeout(() => {
     Dashboard._fetchAIRefinement();
   }, 2000);
@@ -976,6 +977,7 @@ Dashboard._startAIRefinement = function() {
 
 /**
  * Cancel any pending AI refinement (timer + in-flight fetch).
+ * Also removes shimmer from rec cards.
  */
 Dashboard._cancelAIRefinement = function() {
   if (Dashboard._refineTimeout) {
@@ -986,6 +988,22 @@ Dashboard._cancelAIRefinement = function() {
     Dashboard._activeAbort.abort();
     Dashboard._activeAbort = null;
   }
+  Dashboard._setRecCardsRefining(false);
+};
+
+/**
+ * Add or remove the 'refining' shimmer class on all rec cards.
+ * @param {boolean} refining - true to add shimmer, false to remove
+ */
+Dashboard._setRecCardsRefining = function(refining) {
+  const cards = document.querySelectorAll('.rec-card');
+  cards.forEach(card => {
+    if (refining) {
+      card.classList.add('refining');
+    } else {
+      card.classList.remove('refining');
+    }
+  });
 };
 
 /**
@@ -1049,14 +1067,16 @@ Dashboard._fetchAIRefinement = function() {
       if (!data.action || !data.watch || !data.trigger) return;
       if (data.action.length > 500 || data.watch.length > 500 || data.trigger.length > 500) return;
 
-      // Apply AI text via same crossfade
+      // Apply AI text via same crossfade and remove shimmer
       Dashboard._recState = 'updated';
+      Dashboard._setRecCardsRefining(false);
       Visualizations.renderRecommendations(data, true);
     })
     .catch(() => {
-      // Network error / aborted / garbled — silently keep template text
+      // Network error / aborted / garbled — silently keep template text, remove shimmer
       if (thisVersion === Dashboard._recVersion) {
         Dashboard._recState = 'updated';
+        Dashboard._setRecCardsRefining(false);
       }
     });
 };

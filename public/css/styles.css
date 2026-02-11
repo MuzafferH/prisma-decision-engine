@@ -485,6 +485,8 @@ body {
   border: 1px solid var(--border);
   border-left: 3px solid;
   animation: recSlideIn 0.5s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 @keyframes recSlideIn {
@@ -520,6 +522,51 @@ body {
 
 .rec-card p.fading {
   opacity: 0;
+}
+
+/* -- Shimmer / Refining State for Rec Cards -- */
+@keyframes recShimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.rec-card.refining {
+  border-color: rgba(37, 99, 235, 0.18);
+  transition: border-color 0.3s ease;
+}
+
+.rec-card.refining::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(37, 99, 235, 0.03) 35%,
+    rgba(37, 99, 235, 0.07) 50%,
+    rgba(37, 99, 235, 0.03) 65%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: recShimmer 2s ease-in-out infinite;
+}
+
+.rec-card .refining-label {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  opacity: 0.65;
+  margin-top: 6px;
+}
+
+.rec-card.refining .refining-label {
+  display: block;
+  animation: fadeIn 0.3s ease;
 }
 
 /* -- Simulation Count Toggle -- */
