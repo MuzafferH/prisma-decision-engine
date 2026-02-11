@@ -1,0 +1,636 @@
+{
+  "meta": {
+    "title": "Fleet Expansion Decision for Last-Mile Delivery",
+    "summary": "A last-mile delivery company with 5 drivers handling 80 deliveries/day faces reliability issues with 2 drivers. Deciding between hiring, route optimization, or maintaining status quo.",
+    "tier": 2,
+    "generatedAt": "2026-02-11T14:30:00Z"
+  },
+
+  "variables": [
+    {
+      "id": "driver_count",
+      "label": "Active Drivers",
+      "value": 5,
+      "min": 5,
+      "max": 5,
+      "distribution": "fixed",
+      "unit": "drivers",
+      "isInput": false
+    },
+    {
+      "id": "daily_deliveries",
+      "label": "Daily Deliveries",
+      "value": 80,
+      "min": 60,
+      "max": 110,
+      "distribution": "right_skewed",
+      "unit": "deliveries/day",
+      "isInput": true
+    },
+    {
+      "id": "driver_reliability",
+      "label": "Driver Reliability Rate",
+      "value": 0.77,
+      "min": 0.5,
+      "max": 0.95,
+      "distribution": "normal",
+      "unit": "%",
+      "isInput": false
+    },
+    {
+      "id": "delivery_time_avg",
+      "label": "Avg Delivery Time",
+      "value": 18,
+      "min": 12,
+      "max": 28,
+      "distribution": "normal",
+      "unit": "minutes",
+      "isInput": true
+    },
+    {
+      "id": "cost_per_delivery",
+      "label": "Cost per Delivery",
+      "value": 2.80,
+      "min": 2.20,
+      "max": 4.50,
+      "distribution": "right_skewed",
+      "unit": "€",
+      "isInput": false
+    },
+    {
+      "id": "monthly_driver_cost",
+      "label": "Monthly Cost per Driver",
+      "value": 3200,
+      "min": 3000,
+      "max": 3400,
+      "distribution": "normal",
+      "unit": "€/driver",
+      "isInput": false
+    },
+    {
+      "id": "fuel_cost_monthly",
+      "label": "Monthly Fuel Cost",
+      "value": 2000,
+      "min": 1600,
+      "max": 2800,
+      "distribution": "right_skewed",
+      "unit": "€/month",
+      "isInput": false
+    },
+    {
+      "id": "overtime_hours_weekly",
+      "label": "Overtime Hours per Week",
+      "value": 12,
+      "min": 0,
+      "max": 30,
+      "distribution": "right_skewed",
+      "unit": "hours/week",
+      "isInput": false
+    },
+    {
+      "id": "customer_satisfaction",
+      "label": "Customer Satisfaction Score",
+      "value": 4.1,
+      "min": 3.2,
+      "max": 4.8,
+      "distribution": "normal",
+      "unit": "/5",
+      "isInput": false
+    },
+    {
+      "id": "monthly_revenue",
+      "label": "Monthly Revenue",
+      "value": 28800,
+      "min": 22000,
+      "max": 38000,
+      "distribution": "normal",
+      "unit": "€/month",
+      "isInput": false
+    },
+    {
+      "id": "late_deliveries",
+      "label": "Late Deliveries",
+      "value": 18,
+      "min": 2,
+      "max": 35,
+      "distribution": "right_skewed",
+      "unit": "%",
+      "isInput": false
+    },
+    {
+      "id": "capacity_utilization",
+      "label": "Fleet Capacity Utilization",
+      "value": 0.92,
+      "min": 0.60,
+      "max": 1.0,
+      "distribution": "normal",
+      "unit": "%",
+      "isInput": false
+    },
+    {
+      "id": "monthly_profit",
+      "label": "Monthly Profit",
+      "value": 4320,
+      "min": -2000,
+      "max": 12000,
+      "distribution": "normal",
+      "unit": "€/month",
+      "isInput": false
+    }
+  ],
+
+  "edges": [
+    {
+      "from": "driver_count",
+      "to": "capacity_utilization",
+      "effect": "negative",
+      "strength": 0.85,
+      "formula": "capacity_utilization = daily_deliveries / (driver_count * 18)",
+      "isFeedbackLoop": false
+    },
+    {
+      "from": "driver_count",
+      "to": "overtime_hours_weekly",
+      "effect": "negative",
+      "strength": 0.75,
+      "formula": "overtime_hours_weekly = Math.max(0, (daily_deliveries - driver_count * 15) * 0.8)",
+      "isFeedbackLoop": false
+    },
+    {
+      "from": "driver_reliability",
+      "to": "late_deliveries",
+      "effect": "negative",
+      "strength": 0.90,
+      "formula": "late_deliveries = (1 - driver_reliability) * 25 + delivery_time_avg * 0.3",
+      "isFeedbackLoop": true
+    },
+    {
+      "from": "late_deliveries",
+      "to": "customer_satisfaction",
+      "effect": "negative",
+      "strength": 0.80,
+      "formula": "customer_satisfaction = 4.8 - (late_deliveries / 100) * 3.2",
+      "isFeedbackLoop": false
+    },
+    {
+      "from": "customer_satisfaction",
+      "to": "monthly_revenue",
+      "effect": "positive",
+      "strength": 0.85,
+      "formula": "monthly_revenue = daily_deliveries * 30 * 10 * (customer_satisfaction / 5)",
+      "isFeedbackLoop": false
+    },
+    {
+      "from": "overtime_hours_weekly",
+      "to": "driver_reliability",
+      "effect": "negative",
+      "strength": 0.70,
+      "formula": "driver_reliability = 0.95 - (overtime_hours_weekly / 30) * 0.35",
+      "isFeedbackLoop": true
+    },
+    {
+      "from": "daily_deliveries",
+      "to": "overtime_hours_weekly",
+      "effect": "positive",
+      "strength": 0.65,
+      "formula": null,
+      "isFeedbackLoop": false
+    },
+    {
+      "from": "fuel_cost_monthly",
+      "to": "cost_per_delivery",
+      "effect": "positive",
+      "strength": 0.55,
+      "formula": "cost_per_delivery = 1.80 + (fuel_cost_monthly / (daily_deliveries * 30)) + (monthly_driver_cost * driver_count / (daily_deliveries * 30))",
+      "isFeedbackLoop": false
+    },
+    {
+      "from": "cost_per_delivery",
+      "to": "monthly_profit",
+      "effect": "negative",
+      "strength": 0.95,
+      "formula": null,
+      "isFeedbackLoop": false
+    },
+    {
+      "from": "monthly_revenue",
+      "to": "monthly_profit",
+      "effect": "positive",
+      "strength": 0.95,
+      "formula": "monthly_profit = monthly_revenue - (cost_per_delivery * daily_deliveries * 30) - (monthly_driver_cost * driver_count) - fuel_cost_monthly",
+      "isFeedbackLoop": false
+    },
+    {
+      "from": "delivery_time_avg",
+      "to": "capacity_utilization",
+      "effect": "positive",
+      "strength": 0.60,
+      "formula": null,
+      "isFeedbackLoop": false
+    }
+  ],
+
+  "feedbackLoops": [
+    {
+      "path": ["driver_reliability", "late_deliveries", "overtime_hours_weekly", "driver_reliability"],
+      "type": "negative",
+      "label": "Death Spiral: Unreliable Drivers → Late Deliveries → Overtime → Burnout"
+    },
+    {
+      "path": ["customer_satisfaction", "monthly_revenue", "driver_count", "capacity_utilization", "late_deliveries", "customer_satisfaction"],
+      "type": "positive",
+      "label": "Virtuous Cycle: Happy Customers → Revenue → Hiring → Better Service"
+    }
+  ],
+
+  "scenarios": [
+    {
+      "id": "hire_two_drivers",
+      "label": "Hire 2 New Drivers",
+      "color": "#10b981",
+      "changes": {
+        "driver_count": {
+          "value": 7,
+          "min": 7,
+          "max": 7
+        },
+        "monthly_driver_cost": {
+          "delta": 6400
+        },
+        "overtime_hours_weekly": {
+          "value": 4,
+          "min": 0,
+          "max": 12
+        },
+        "driver_reliability": {
+          "value": 0.88,
+          "min": 0.75,
+          "max": 0.95
+        }
+      },
+      "assumptions": [
+        "New drivers are trained and reliable (85%+ reliability rate)",
+        "Hiring cost amortized over 12 months (€1,200 per driver)",
+        "Reduced workload improves existing driver morale and reliability",
+        "Overtime drops by ~65% due to better capacity",
+        "Training period is 2 weeks with minimal impact"
+      ]
+    },
+    {
+      "id": "restructure_routes",
+      "label": "Restructure Routes with Optimization Software",
+      "color": "#3b82f6",
+      "changes": {
+        "delivery_time_avg": {
+          "value": 15.3,
+          "min": 10,
+          "max": 24,
+          "delta": -2.7
+        },
+        "cost_per_delivery": {
+          "value": 2.52,
+          "min": 2.10,
+          "max": 4.00,
+          "delta": -0.28
+        },
+        "fuel_cost_monthly": {
+          "value": 1700,
+          "min": 1400,
+          "max": 2400,
+          "delta": -300
+        }
+      },
+      "assumptions": [
+        "Route optimization software cost: €450/month (included in cost savings)",
+        "15% improvement in delivery time from optimized routes",
+        "10% reduction in cost per delivery from fuel savings",
+        "Implementation takes 1 week with 10% temporary efficiency loss",
+        "Requires driver retraining on new routes (1-2 days per driver)"
+      ]
+    },
+    {
+      "id": "do_nothing",
+      "label": "Do Nothing (Status Quo)",
+      "color": "#ef4444",
+      "changes": {},
+      "assumptions": [
+        "Current trends continue with no intervention",
+        "Driver reliability continues to decline at ~2% per month",
+        "Overtime increases by 1.5 hours per week per month",
+        "Customer satisfaction drops 0.15 points every 2 months",
+        "Risk of losing customers to competitors increases"
+      ]
+    }
+  ],
+
+  "outcome": {
+    "id": "monthly_profit_delta",
+    "label": "Monthly Profit Change",
+    "unit": "€/month",
+    "formula": "scenario_monthly_profit - baseline_monthly_profit",
+    "positiveLabel": "Profit Gain",
+    "negativeLabel": "Profit Loss"
+  },
+
+  "markov": {
+    "enabled": true,
+    "months": 12,
+    "entities": [
+      {
+        "id": "driver_kai",
+        "label": "Driver Kai (Currently Unreliable)",
+        "initialState": "unreliable",
+        "states": ["reliable", "unreliable", "burned_out", "quit"],
+        "transitions": {
+          "reliable": {
+            "reliable": 0.85,
+            "unreliable": 0.12,
+            "burned_out": 0.02,
+            "quit": 0.01
+          },
+          "unreliable": {
+            "reliable": 0.15,
+            "unreliable": 0.55,
+            "burned_out": 0.25,
+            "quit": 0.05
+          },
+          "burned_out": {
+            "reliable": 0.05,
+            "unreliable": 0.20,
+            "burned_out": 0.50,
+            "quit": 0.25
+          },
+          "quit": {
+            "reliable": 0.0,
+            "unreliable": 0.0,
+            "burned_out": 0.0,
+            "quit": 1.0
+          }
+        },
+        "scenarioTransitions": {
+          "hire_two_drivers": {
+            "reliable": {
+              "reliable": 0.90,
+              "unreliable": 0.08,
+              "burned_out": 0.01,
+              "quit": 0.01
+            },
+            "unreliable": {
+              "reliable": 0.40,
+              "unreliable": 0.45,
+              "burned_out": 0.12,
+              "quit": 0.03
+            },
+            "burned_out": {
+              "reliable": 0.15,
+              "unreliable": 0.25,
+              "burned_out": 0.45,
+              "quit": 0.15
+            },
+            "quit": {
+              "reliable": 0.0,
+              "unreliable": 0.0,
+              "burned_out": 0.0,
+              "quit": 1.0
+            }
+          },
+          "restructure_routes": {
+            "reliable": {
+              "reliable": 0.88,
+              "unreliable": 0.10,
+              "burned_out": 0.01,
+              "quit": 0.01
+            },
+            "unreliable": {
+              "reliable": 0.25,
+              "unreliable": 0.55,
+              "burned_out": 0.17,
+              "quit": 0.03
+            },
+            "burned_out": {
+              "reliable": 0.08,
+              "unreliable": 0.22,
+              "burned_out": 0.52,
+              "quit": 0.18
+            },
+            "quit": {
+              "reliable": 0.0,
+              "unreliable": 0.0,
+              "burned_out": 0.0,
+              "quit": 1.0
+            }
+          },
+          "do_nothing": {
+            "reliable": {
+              "reliable": 0.80,
+              "unreliable": 0.15,
+              "burned_out": 0.03,
+              "quit": 0.02
+            },
+            "unreliable": {
+              "reliable": 0.08,
+              "unreliable": 0.50,
+              "burned_out": 0.35,
+              "quit": 0.07
+            },
+            "burned_out": {
+              "reliable": 0.02,
+              "unreliable": 0.15,
+              "burned_out": 0.48,
+              "quit": 0.35
+            },
+            "quit": {
+              "reliable": 0.0,
+              "unreliable": 0.0,
+              "burned_out": 0.0,
+              "quit": 1.0
+            }
+          }
+        }
+      },
+      {
+        "id": "driver_maya",
+        "label": "Driver Maya (Currently Unreliable)",
+        "initialState": "unreliable",
+        "states": ["reliable", "unreliable", "burned_out", "quit"],
+        "transitions": {
+          "reliable": {
+            "reliable": 0.85,
+            "unreliable": 0.12,
+            "burned_out": 0.02,
+            "quit": 0.01
+          },
+          "unreliable": {
+            "reliable": 0.20,
+            "unreliable": 0.50,
+            "burned_out": 0.25,
+            "quit": 0.05
+          },
+          "burned_out": {
+            "reliable": 0.05,
+            "unreliable": 0.20,
+            "burned_out": 0.50,
+            "quit": 0.25
+          },
+          "quit": {
+            "reliable": 0.0,
+            "unreliable": 0.0,
+            "burned_out": 0.0,
+            "quit": 1.0
+          }
+        },
+        "scenarioTransitions": {
+          "hire_two_drivers": {
+            "reliable": {
+              "reliable": 0.90,
+              "unreliable": 0.08,
+              "burned_out": 0.01,
+              "quit": 0.01
+            },
+            "unreliable": {
+              "reliable": 0.45,
+              "unreliable": 0.42,
+              "burned_out": 0.10,
+              "quit": 0.03
+            },
+            "burned_out": {
+              "reliable": 0.18,
+              "unreliable": 0.27,
+              "burned_out": 0.42,
+              "quit": 0.13
+            },
+            "quit": {
+              "reliable": 0.0,
+              "unreliable": 0.0,
+              "burned_out": 0.0,
+              "quit": 1.0
+            }
+          },
+          "restructure_routes": {
+            "reliable": {
+              "reliable": 0.88,
+              "unreliable": 0.10,
+              "burned_out": 0.01,
+              "quit": 0.01
+            },
+            "unreliable": {
+              "reliable": 0.28,
+              "unreliable": 0.52,
+              "burned_out": 0.17,
+              "quit": 0.03
+            },
+            "burned_out": {
+              "reliable": 0.10,
+              "unreliable": 0.25,
+              "burned_out": 0.50,
+              "quit": 0.15
+            },
+            "quit": {
+              "reliable": 0.0,
+              "unreliable": 0.0,
+              "burned_out": 0.0,
+              "quit": 1.0
+            }
+          },
+          "do_nothing": {
+            "reliable": {
+              "reliable": 0.78,
+              "unreliable": 0.17,
+              "burned_out": 0.03,
+              "quit": 0.02
+            },
+            "unreliable": {
+              "reliable": 0.10,
+              "unreliable": 0.48,
+              "burned_out": 0.35,
+              "quit": 0.07
+            },
+            "burned_out": {
+              "reliable": 0.03,
+              "unreliable": 0.17,
+              "burned_out": 0.45,
+              "quit": 0.35
+            },
+            "quit": {
+              "reliable": 0.0,
+              "unreliable": 0.0,
+              "burned_out": 0.0,
+              "quit": 1.0
+            }
+          }
+        }
+      }
+    ],
+    "stateEffects": {
+      "driver_kai.reliable": {
+        "driver_reliability": 0.05,
+        "late_deliveries": -3
+      },
+      "driver_kai.unreliable": {
+        "driver_reliability": -0.04,
+        "late_deliveries": 4
+      },
+      "driver_kai.burned_out": {
+        "driver_reliability": -0.10,
+        "late_deliveries": 8,
+        "overtime_hours_weekly": 3
+      },
+      "driver_kai.quit": {
+        "driver_count": -1,
+        "driver_reliability": -0.08,
+        "overtime_hours_weekly": 6
+      },
+      "driver_maya.reliable": {
+        "driver_reliability": 0.05,
+        "late_deliveries": -3
+      },
+      "driver_maya.unreliable": {
+        "driver_reliability": -0.04,
+        "late_deliveries": 4
+      },
+      "driver_maya.burned_out": {
+        "driver_reliability": -0.10,
+        "late_deliveries": 8,
+        "overtime_hours_weekly": 3
+      },
+      "driver_maya.quit": {
+        "driver_count": -1,
+        "driver_reliability": -0.08,
+        "overtime_hours_weekly": 6
+      }
+    }
+  },
+
+  "recommendation": {
+    "action": "Hire 2 new drivers immediately. The death spiral is real — every week you wait, driver reliability drops further and overtime increases. Current trajectory shows 58% probability that either Kai or Maya quits within 3 months under status quo.",
+    "watch": "Monitor driver overtime hours and Tuesday/Thursday delivery completion rates (historically your worst days). Track customer satisfaction scores weekly. Watch for any driver exceeding 15 hours overtime per week — that's your early warning signal.",
+    "trigger": "If daily order volume drops below 65 deliveries for 2 consecutive weeks, pivot to hiring only 1 driver instead of 2. If route optimization can be implemented within 2 weeks, consider doing both interventions simultaneously for maximum impact."
+  },
+
+  "discoveries": [
+    {
+      "title": "Hidden Feedback Loop: Overtime Death Spiral",
+      "description": "The data reveals a vicious cycle where high overtime reduces driver reliability, which increases late deliveries, forcing remaining drivers into more overtime. This isn't linear — it accelerates. At current rates, you're 3-4 weeks from a complete breakdown.",
+      "impact": "high",
+      "type": "risk"
+    },
+    {
+      "title": "Tuesday/Thursday Delivery Time Anomaly",
+      "description": "Delivery times are 23% longer on Tuesdays and Thursdays compared to other weekdays. This suggests route inefficiency or scheduling issues specific to mid-week operations, not just capacity constraints.",
+      "impact": "medium",
+      "type": "pattern"
+    },
+    {
+      "title": "Customer Retention Leverage Point",
+      "description": "Analysis shows customer satisfaction has 0.85 correlation with revenue — far higher than industry average (0.60). Your customers are exceptionally loyal when happy, but churn rapidly when disappointed. This makes the reliability issue even more critical.",
+      "impact": "high",
+      "type": "opportunity"
+    },
+    {
+      "title": "Fuel Cost Variance Pattern",
+      "description": "Monthly fuel costs vary by 40% despite relatively stable delivery volumes. This suggests inconsistent route planning or driver behavior. Route optimization could capture €300-400/month in savings beyond just efficiency.",
+      "impact": "medium",
+      "type": "opportunity"
+    }
+  ]
+}
