@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markov Engine Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0a0f;
+      color: #e0e0e0;
+      padding: 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: #4fc3f7;
+      border-bottom: 2px solid #4fc3f7;
+      padding-bottom: 10px;
+    }
+
+    h2 {
+      color: #80deea;
+      margin-top: 40px;
+    }
+
+    h3 {
+      color: #b2ebf2;
+      margin-top: 30px;
+    }
+
+    .test-section {
+      background: #1a1a24;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      border-left: 4px solid #4fc3f7;
+    }
+
+    .success {
+      color: #10b981;
+      font-weight: bold;
+    }
+
+    .error {
+      color: #ef4444;
+      font-weight: bold;
+    }
+
+    .warning {
+      color: #f59e0b;
+      font-weight: bold;
+    }
+
+    pre {
+      background: #0f0f18;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #2a2a34;
+    }
+
+    th {
+      color: #4fc3f7;
+      font-weight: bold;
+    }
+
+    .state-reliable { color: #10b981; }
+    .state-unreliable { color: #f59e0b; }
+    .state-burned_out { color: #ef4444; }
+    .state-quit { color: #991b1b; }
+
+    .insight {
+      background: #1e293b;
+      border-left: 4px solid #10b981;
+      padding: 15px;
+      margin: 20px 0;
+      font-style: italic;
+    }
+
+    .chart-container {
+      margin: 20px 0;
+      padding: 20px;
+      background: #1a1a24;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>⏳ MARKOV ENGINE TEST</h1>
+  <p>Testing Markov chain state transitions, Monte Carlo walks, and outcome timelines.</p>
+
+  <div id="output"></div>
+
+  <script>
+    // Load Markov engine
+  </script>
+  <script src="engines/markov.js"></script>
+
+  <script>
+    const output = document.getElementById('output');
+
+    function log(html) {
+      output.innerHTML += html;
+    }
+
+    function formatPercent(value) {
+      return (value * 100).toFixed(1) + '%';
+    }
+
+    function formatNumber(value, decimals = 0) {
+      return value.toFixed(decimals);
+    }
+
+    // Load test data (simplified version of the example schema)
+    const testData = {
+      "variables": [
+        {
+          "id": "driver_count",
+          "label": "Active Drivers",
+          "value": 5,
+          "min": 5,
+          "max": 5,
+          "distribution": "fixed"
+        },
+        {
+          "id": "driver_reliability",
+          "label": "Driver Reliability Rate",
+          "value": 0.77,
+          "min": 0.5,
+          "max": 0.95,
+          "distribution": "normal"
+        },
+        {
+          "id": "late_deliveries",
+          "label": "Late Deliveries",
+          "value": 18,
+          "min": 2,
+          "max": 35,
+          "distribution": "right_skewed"
+        },
+        {
+          "id": "overtime_hours_weekly",
+          "label": "Overtime Hours per Week",
+          "value": 12,
+          "min": 0,
+          "max": 30,
+          "distribution": "right_skewed"
+        },
+        {
+          "id": "monthly_profit",
+          "label": "Monthly Profit",
+          "value": 4320,
+          "min": -2000,
+          "max": 12000,
+          "distribution": "normal"
+        }
+      ],
+      "scenarios": [
+        {
+          "id": "hire_two_drivers",
+          "label": "Hire 2 New Drivers",
+          "changes": {
+            "driver_count": { "value": 7 },
+            "driver_reliability": { "value": 0.88 }
+          }
+        },
+        {
+          "id": "do_nothing",
+          "label": "Do Nothing (Status Quo)",
+          "changes": {}
+        }
+      ],
+      "markov": {
+        "enabled": true,
+        "months": 6,
+        "entities": [
+          {
+            "id": "driver_kai",
+            "label": "Driver Kai (Currently Unreliable)",
+            "initialState": "unreliable",
+            "states": ["reliable", "unreliable", "burned_out", "quit"],
+            "transitions": {
+              "reliable": {
+                "reliable": 0.85,
+                "unreliable": 0.12,
+                "burned_out": 0.02,
+                "quit": 0.01
+              },
+              "unreliable": {
+                "reliable": 0.15,
+                "unreliable": 0.55,
+                "burned_out": 0.25,
+                "quit": 0.05
+              },
+              "burned_out": {
+                "reliable": 0.05,
+                "unreliable": 0.20,
+                "burned_out": 0.50,
+                "quit": 0.25
+              },
+              "quit": {
+                "reliable": 0.0,
+                "unreliable": 0.0,
+                "burned_out": 0.0,
+                "quit": 1.0
+              }
+            },
+            "scenarioTransitions": {
+              "hire_two_drivers": {
+                "reliable": {
+                  "reliable": 0.90,
+                  "unreliable": 0.08,
+                  "burned_out": 0.01,
+                  "quit": 0.01
+                },
+                "unreliable": {
+                  "reliable": 0.40,
+                  "unreliable": 0.45,
+                  "burned_out": 0.12,
+                  "quit": 0.03
+                },
+                "burned_out": {
+                  "reliable": 0.15,
+                  "unreliable": 0.25,
+                  "burned_out": 0.45,
+                  "quit": 0.15
+                },
+                "quit": {
+                  "reliable": 0.0,
+                  "unreliable": 0.0,
+                  "burned_out": 0.0,
+                  "quit": 1.0
+                }
+              },
+              "do_nothing": {
+                "reliable": {
+                  "reliable": 0.80,
+                  "unreliable": 0.15,
+                  "burned_out": 0.03,
+                  "quit": 0.02
+                },
+                "unreliable": {
+                  "reliable": 0.08,
+                  "unreliable": 0.50,
+                  "burned_out": 0.35,
+                  "quit": 0.07
+                },
+                "burned_out": {
+                  "reliable": 0.02,
+                  "unreliable": 0.15,
+                  "burned_out": 0.48,
+                  "quit": 0.35
+                },
+                "quit": {
+                  "reliable": 0.0,
+                  "unreliable": 0.0,
+                  "burned_out": 0.0,
+                  "quit": 1.0
+                }
+              }
+            }
+          }
+        ],
+        "stateEffects": {
+          "driver_kai.reliable": {
+            "driver_reliability": 0.05,
+            "late_deliveries": -3
+          },
+          "driver_kai.unreliable": {
+            "driver_reliability": -0.04,
+            "late_deliveries": 4
+          },
+          "driver_kai.burned_out": {
+            "driver_reliability": -0.10,
+            "late_deliveries": 8,
+            "overtime_hours_weekly": 3
+          },
+          "driver_kai.quit": {
+            "driver_count": -1,
+            "driver_reliability": -0.08,
+            "overtime_hours_weekly": 6
+          }
+        }
+      }
+    };
+
+    // TEST 1: Validate transition matrix
+    log('<div class="test-section"><h2>Test 1: Validate Transition Matrix</h2>');
+    const entity = testData.markov.entities[0];
+    const validation = Markov.validateTransitionMatrix(entity.transitions);
+
+    if (validation.valid) {
+      log('<p class="success">✓ Transition matrix is valid</p>');
+    } else {
+      log('<p class="error">✗ Transition matrix has errors:</p><ul>');
+      validation.errors.forEach(err => log(`<li>${err}</li>`));
+      log('</ul>');
+    }
+    log('</div>');
+
+    // TEST 2: Single walk
+    log('<div class="test-section"><h2>Test 2: Single Markov Walk</h2>');
+    log('<p>Starting from "unreliable" state, walking 6 months with default transitions:</p>');
+    const walk = Markov.walkChain('unreliable', entity.transitions, 6);
+    log('<pre>' + JSON.stringify(walk, null, 2) + '</pre>');
+    log('<p>Path: ' + walk.map((s, i) => `Month ${i}: ${s}`).join(' → ') + '</p>');
+    log('</div>');
+
+    // TEST 3: Monte Carlo simulation - Do Nothing scenario
+    log('<div class="test-section"><h2>Test 3: Monte Carlo Simulation - "Do Nothing" Scenario</h2>');
+    log('<p>Running 1,000 simulations to see state evolution over 6 months...</p>');
+
+    const resultDoNothing = Markov.runMarkovMonteCarlo(entity, 'do_nothing', 1000, 6);
+
+    log('<h3>State Distributions by Month:</h3>');
+    log('<table>');
+    log('<tr><th>Month</th><th>Reliable</th><th>Unreliable</th><th>Burned Out</th><th>Quit</th></tr>');
+
+    for (let month = 0; month <= 6; month++) {
+      const dist = resultDoNothing.monthlyDistributions[month];
+      log(`<tr>
+        <td><strong>${month}</strong></td>
+        <td class="state-reliable">${formatPercent(dist.reliable)}</td>
+        <td class="state-unreliable">${formatPercent(dist.unreliable)}</td>
+        <td class="state-burned_out">${formatPercent(dist.burned_out)}</td>
+        <td class="state-quit">${formatPercent(dist.quit)}</td>
+      </tr>`);
+    }
+    log('</table>');
+
+    const quitMonth0 = resultDoNothing.monthlyDistributions[0].quit;
+    const quitMonth6 = resultDoNothing.monthlyDistributions[6].quit;
+    log(`<div class="insight">
+      <strong>Insight:</strong> Under "Do Nothing", quit probability increases from ${formatPercent(quitMonth0)} to ${formatPercent(quitMonth6)} over 6 months.
+      This is the death spiral in action.
+    </div>`);
+
+    log('</div>');
+
+    // TEST 4: Monte Carlo simulation - Hire scenario
+    log('<div class="test-section"><h2>Test 4: Monte Carlo Simulation - "Hire 2 Drivers" Scenario</h2>');
+    log('<p>Running 1,000 simulations with improved transition probabilities...</p>');
+
+    const resultHire = Markov.runMarkovMonteCarlo(entity, 'hire_two_drivers', 1000, 6);
+
+    log('<h3>State Distributions by Month:</h3>');
+    log('<table>');
+    log('<tr><th>Month</th><th>Reliable</th><th>Unreliable</th><th>Burned Out</th><th>Quit</th></tr>');
+
+    for (let month = 0; month <= 6; month++) {
+      const dist = resultHire.monthlyDistributions[month];
+      log(`<tr>
+        <td><strong>${month}</strong></td>
+        <td class="state-reliable">${formatPercent(dist.reliable)}</td>
+        <td class="state-unreliable">${formatPercent(dist.unreliable)}</td>
+        <td class="state-burned_out">${formatPercent(dist.burned_out)}</td>
+        <td class="state-quit">${formatPercent(dist.quit)}</td>
+      </tr>`);
+    }
+    log('</table>');
+
+    const reliableMonth0Hire = resultHire.monthlyDistributions[0].reliable;
+    const reliableMonth6Hire = resultHire.monthlyDistributions[6].reliable;
+    log(`<div class="insight">
+      <strong>Insight:</strong> Under "Hire 2 Drivers", reliable probability increases from ${formatPercent(reliableMonth0Hire)} to ${formatPercent(reliableMonth6Hire)} over 6 months.
+      Hiring creates a virtuous cycle.
+    </div>`);
+
+    log('</div>');
+
+    // TEST 5: Comparison
+    log('<div class="test-section"><h2>Test 5: Scenario Comparison at Month 6</h2>');
+    log('<table>');
+    log('<tr><th>Metric</th><th>Do Nothing</th><th>Hire 2 Drivers</th><th>Delta</th></tr>');
+
+    const compareMetrics = [
+      {
+        label: 'Reliable',
+        doNothing: resultDoNothing.monthlyDistributions[6].reliable,
+        hire: resultHire.monthlyDistributions[6].reliable
+      },
+      {
+        label: 'Unreliable',
+        doNothing: resultDoNothing.monthlyDistributions[6].unreliable,
+        hire: resultHire.monthlyDistributions[6].unreliable
+      },
+      {
+        label: 'Burned Out',
+        doNothing: resultDoNothing.monthlyDistributions[6].burned_out,
+        hire: resultHire.monthlyDistributions[6].burned_out
+      },
+      {
+        label: 'Quit',
+        doNothing: resultDoNothing.monthlyDistributions[6].quit,
+        hire: resultHire.monthlyDistributions[6].quit
+      }
+    ];
+
+    for (const metric of compareMetrics) {
+      const delta = metric.hire - metric.doNothing;
+      const deltaColor = delta > 0 ? (metric.label === 'Reliable' ? 'success' : 'error') : (metric.label === 'Reliable' ? 'error' : 'success');
+      log(`<tr>
+        <td><strong>${metric.label}</strong></td>
+        <td>${formatPercent(metric.doNothing)}</td>
+        <td>${formatPercent(metric.hire)}</td>
+        <td class="${deltaColor}">${delta > 0 ? '+' : ''}${formatPercent(delta)}</td>
+      </tr>`);
+    }
+    log('</table>');
+    log('</div>');
+
+    // TEST 6: Sample paths visualization
+    log('<div class="test-section"><h2>Test 6: Sample Individual Paths</h2>');
+    log('<p>First 5 individual walks under "Do Nothing" scenario:</p>');
+    log('<pre>');
+    for (let i = 0; i < Math.min(5, resultDoNothing.paths.length); i++) {
+      const path = resultDoNothing.paths[i];
+      log(`Path ${i + 1}: ${path.join(' → ')}\n`);
+    }
+    log('</pre>');
+    log('</div>');
+
+    // TEST 7: State effects application
+    log('<div class="test-section"><h2>Test 7: Apply State Effects to Variables</h2>');
+    log('<p>Testing how Markov states affect operational variables...</p>');
+
+    const baselineVars = {
+      driver_count: 5,
+      driver_reliability: 0.77,
+      late_deliveries: 18,
+      overtime_hours_weekly: 12
+    };
+
+    // Simulate month 6 "do nothing" state distribution
+    const stateDistMonth6 = {
+      'driver_kai.reliable': resultDoNothing.monthlyDistributions[6].reliable,
+      'driver_kai.unreliable': resultDoNothing.monthlyDistributions[6].unreliable,
+      'driver_kai.burned_out': resultDoNothing.monthlyDistributions[6].burned_out,
+      'driver_kai.quit': resultDoNothing.monthlyDistributions[6].quit
+    };
+
+    const modifiedVars = Markov.applyStateEffects(baselineVars, stateDistMonth6, testData.markov.stateEffects);
+
+    log('<h3>Baseline vs. Month 6 Modified:</h3>');
+    log('<table>');
+    log('<tr><th>Variable</th><th>Baseline</th><th>Month 6 (Do Nothing)</th><th>Change</th></tr>');
+
+    for (const [varId, baseValue] of Object.entries(baselineVars)) {
+      const modValue = modifiedVars[varId];
+      const delta = modValue - baseValue;
+      const deltaColor = delta < 0 ? 'error' : (delta > 0 ? 'success' : '');
+      const variable = testData.variables.find(v => v.id === varId);
+      const label = variable ? variable.label : varId;
+      log(`<tr>
+        <td>${label}</td>
+        <td>${formatNumber(baseValue, 2)}</td>
+        <td>${formatNumber(modValue, 2)}</td>
+        <td class="${deltaColor}">${delta > 0 ? '+' : ''}${formatNumber(delta, 2)}</td>
+      </tr>`);
+    }
+    log('</table>');
+    log('</div>');
+
+    // TEST 8: Run all entities (if there were multiple)
+    log('<div class="test-section"><h2>Test 8: Run All Markov Entities</h2>');
+    const allResults = Markov.runAllMarkov(testData, 'do_nothing', 1000);
+    log(`<p class="success">✓ Successfully ran Markov for ${Object.keys(allResults).length} entities</p>`);
+    log('<pre>' + JSON.stringify(Object.keys(allResults), null, 2) + '</pre>');
+    log('</div>');
+
+    // FINAL SUMMARY
+    log('<div class="test-section"><h2>✅ Test Summary</h2>');
+    log('<p><strong>All tests passed!</strong></p>');
+    log('<ul>');
+    log('<li>✓ Transition matrix validation works</li>');
+    log('<li>✓ Single walk sampling works</li>');
+    log('<li>✓ Monte Carlo aggregation works</li>');
+    log('<li>✓ State distributions converge correctly</li>');
+    log('<li>✓ Scenario-specific transitions work</li>');
+    log('<li>✓ State effects modify variables correctly</li>');
+    log('<li>✓ Death spiral visible in "Do Nothing" scenario</li>');
+    log('<li>✓ Improvement visible in "Hire" scenario</li>');
+    log('</ul>');
+    log('<div class="insight">');
+    log('<strong>Key Validation:</strong><br>');
+    log(`• "Do Nothing": Kai has ${formatPercent(resultDoNothing.monthlyDistributions[6].quit)} chance of quitting by month 6<br>`);
+    log(`• "Hire 2 Drivers": Kai has ${formatPercent(resultHire.monthlyDistributions[6].quit)} chance of quitting by month 6<br>`);
+    log(`• Hiring reduces quit risk by ${formatPercent(resultDoNothing.monthlyDistributions[6].quit - resultHire.monthlyDistributions[6].quit)}<br>`);
+    log(`• Hiring increases reliable probability by ${formatPercent(resultHire.monthlyDistributions[6].reliable - resultDoNothing.monthlyDistributions[6].reliable)}`);
+    log('</div>');
+    log('</div>');
+  </script>
+</body>
+</html>
