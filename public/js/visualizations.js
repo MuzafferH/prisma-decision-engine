@@ -1213,8 +1213,8 @@ const Visualizations = {
 
       const word = document.createElement('div');
       word.className = `classification-word ${classLower}`;
-      // Plain language labels instead of Taleb jargon
-      const plainLabels = { 'FRAGILE': 'HIGH RISK', 'ROBUST': 'RESILIENT', 'ANTIFRAGILE': 'THRIVES IN CHAOS' };
+      // Plain language labels
+      const plainLabels = { 'HIGH_RISK': 'HIGH RISK', 'MODERATE_RISK': 'MODERATE', 'LOW_RISK': 'LOW RISK', 'STRONG': 'STRONG' };
       word.textContent = plainLabels[classification.classification] || classification.classification;
       badge.appendChild(word);
 

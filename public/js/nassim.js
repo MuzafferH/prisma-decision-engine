@@ -1,36 +1,38 @@
 /**
- * NASSIM — Taleb Classification + Sensitivity Analysis Engine
+ * NASSIM — Risk Classification + Sensitivity Analysis Engine
  *
- * Classifies decisions using the Taleb framework:
- * - FRAGILE: Breaks under stress
- * - ROBUST: Survives most stress
- * - ANTIFRAGILE: Benefits from chaos
+ * Classifies decisions using pure mathematical analysis:
+ * - Success rate (% of positive outcomes)
+ * - Risk-reward ratio (upside vs downside)
+ * - Tail risk severity (worst 10% vs median)
  *
  * Also runs sensitivity analysis to identify which variables matter most.
- * Named after Nassim Nicholas Taleb.
  *
  * All functions are PURE (no DOM access, no side effects, no global state).
  */
 
 const Nassim = {
   /**
-   * Classify a decision using Taleb framework
+   * Classify a decision based on simulation statistics.
+   * Uses percentage positive, risk-reward ratio, and tail risk.
    *
-   * @param {Array<number>} outcomes - Array of 1,000 outcome values from Monte Carlo
-   * @param {Array<number>} highVarianceOutcomes - Optional: outcomes from high-variance run (for antifragile detection)
-   * @returns {Object} Classification result with {classification, confidence, percentPositive, percentNegative, medianOutcome, worstCase, bestCase, reasoning}
+   * Risk tiers:
+   *   STRONG:        >75% positive, positive median, manageable downside
+   *   LOW_RISK:      >60% positive, manageable downside
+   *   MODERATE_RISK: 40-60% positive
+   *   HIGH_RISK:     <40% positive OR catastrophic tail risk
+   *
+   * @param {Array<number>} outcomes - Array of outcome values from Monte Carlo
+   * @returns {Object} Classification result
    */
-  classifyTaleb(outcomes, highVarianceOutcomes = null) {
-    // Sort for percentile calculations
+  classifyTaleb(outcomes) {
     const sorted = [...outcomes].sort((a, b) => a - b);
     const n = sorted.length;
 
-    // Calculate key statistics
     const median = sorted[Math.floor(n * 0.5)];
-    const p10 = sorted[Math.floor(n * 0.1)]; // Worst 10%
-    const p90 = sorted[Math.floor(n * 0.9)]; // Best 10%
+    const p10 = sorted[Math.floor(n * 0.1)];
+    const p90 = sorted[Math.floor(n * 0.9)];
 
-    // Count positive and negative outcomes
     const positiveCount = outcomes.filter(x => x > 0).length;
     const negativeCount = outcomes.filter(x => x < 0).length;
     const percentPositive = (positiveCount / n) * 100;
@@ -38,163 +40,62 @@ const Nassim = {
 
     const absMedian = Math.abs(median);
 
-    // Check for ANTIFRAGILE first (if we have high-variance data)
-    if (highVarianceOutcomes && highVarianceOutcomes.length > 0) {
-      const highVarSorted = [...highVarianceOutcomes].sort((a, b) => a - b);
-      const highVarMedian = highVarSorted[Math.floor(highVarSorted.length * 0.5)];
+    // Risk-reward ratio: how much upside per unit of downside
+    const upside = p90 > 0 ? p90 : 0;
+    const downside = p10 < 0 ? Math.abs(p10) : 0;
+    const riskRewardRatio = downside > 0 ? upside / downside : upside > 0 ? 10 : 1;
 
-      // If high-variance outcomes are better than normal outcomes, it's antifragile
-      const improvement = highVarMedian - median;
-      const improvementRatio = absMedian > 0 ? improvement / absMedian : 0;
+    // Tail risk: is the worst case catastrophic relative to the median?
+    const hasCatastrophicTail = absMedian > 0 && Math.abs(p10) > absMedian * 3;
 
-      if (improvement > 0 && improvementRatio > 0.15) {
-        // At least 15% improvement under chaos
-        const confidence = Math.min(0.95, 0.6 + improvementRatio * 0.5);
-        return {
-          classification: 'ANTIFRAGILE',
-          confidence,
-          percentPositive,
-          percentNegative,
-          medianOutcome: median,
-          worstCase: p10,
-          bestCase: p90,
-          reasoning: `This decision actually benefits from volatility. Under high uncertainty, the median outcome improves by ${Math.abs(improvement).toFixed(0)} (${(improvementRatio * 100).toFixed(0)}% better). The more chaotic the environment, the better it performs.`
-        };
-      }
-    }
+    // Classify based on pure statistics
+    let classification, reasoning;
 
-    // Check for FRAGILE
-    const isCatastrophicTail = absMedian > 0 && Math.abs(p10) > absMedian * 3;
-    const isHighNegativeRate = percentNegative > 40;
-
-    if (isHighNegativeRate || isCatastrophicTail) {
-      // Calculate confidence: higher when clearly fragile
-      let confidence = 0.5;
-      if (percentNegative > 60) confidence += 0.3;
-      else if (percentNegative > 50) confidence += 0.2;
-      else if (percentNegative > 40) confidence += 0.1;
-
-      if (isCatastrophicTail) confidence += 0.2;
-
-      confidence = Math.min(0.95, confidence);
-
-      let reasoning = '';
-      if (isHighNegativeRate && isCatastrophicTail) {
-        reasoning = `This decision fails in ${percentNegative.toFixed(0)}% of futures. The worst 10% lose more than ${Math.abs(p10).toFixed(0)} (catastrophic tail risk). Extremely fragile under stress.`;
-      } else if (isHighNegativeRate) {
-        reasoning = `This decision fails in ${percentNegative.toFixed(0)}% of futures. Even without catastrophic tail risk, it has a high failure rate.`;
-      } else {
-        reasoning = `While this decision succeeds in ${percentPositive.toFixed(0)}% of futures, the worst 10% lose more than ${Math.abs(p10).toFixed(0)} (>3x the median). Catastrophic downside risk makes it fragile.`;
-      }
-
-      return {
-        classification: 'FRAGILE',
-        confidence,
-        percentPositive,
-        percentNegative,
-        medianOutcome: median,
-        worstCase: p10,
-        bestCase: p90,
-        reasoning
-      };
-    }
-
-    // Check for ROBUST
-    const isHighPositiveRate = percentPositive > 65;
-    const isManageableTail = absMedian > 0 ? Math.abs(p10) < absMedian * 2 : Math.abs(p10) < 1000;
-
-    if (isHighPositiveRate && isManageableTail) {
-      // Calculate confidence: higher when clearly robust
-      let confidence = 0.6;
-      if (percentPositive > 80) confidence += 0.25;
-      else if (percentPositive > 75) confidence += 0.15;
-      else if (percentPositive > 70) confidence += 0.1;
-
-      confidence = Math.min(0.95, confidence);
-
-      const reasoning = `This decision works in ${percentPositive.toFixed(0)}% of futures. Even in the worst 10%, losses stay under ${Math.abs(p10).toFixed(0)} (manageable downside). It survives most stress scenarios.`;
-
-      return {
-        classification: 'ROBUST',
-        confidence,
-        percentPositive,
-        percentNegative,
-        medianOutcome: median,
-        worstCase: p10,
-        bestCase: p90,
-        reasoning
-      };
-    }
-
-    // Borderline case: doesn't clearly fit any category
-    let borderlineReasoning = '';
-    if (percentPositive >= 50 && percentPositive <= 65) {
-      borderlineReasoning = `Borderline — this decision works in ${percentPositive.toFixed(0)}% of futures but has some exposure. Consider risk mitigation strategies.`;
-    } else if (percentNegative >= 30 && percentNegative <= 40) {
-      borderlineReasoning = `Borderline — this decision fails in ${percentNegative.toFixed(0)}% of futures. Close to fragile territory. Monitor carefully.`;
+    if (percentPositive > 75 && median > 0 && !hasCatastrophicTail) {
+      classification = 'STRONG';
+      reasoning = `This decision works in ${percentPositive.toFixed(0)}% of simulated futures with a positive median outcome. Risk-reward ratio: ${riskRewardRatio.toFixed(1)}x.`;
+    } else if (percentPositive > 60 && !hasCatastrophicTail) {
+      classification = 'LOW_RISK';
+      reasoning = `This decision works in ${percentPositive.toFixed(0)}% of futures. Downside is manageable — worst 10% of outcomes: ${Math.abs(p10).toFixed(0)}.`;
+    } else if (percentPositive >= 40) {
+      classification = 'MODERATE_RISK';
+      reasoning = `This could go either way — ${percentPositive.toFixed(0)}% of futures are positive. Consider risk mitigation before committing.`;
     } else {
-      borderlineReasoning = `This decision doesn't clearly fit fragile or robust categories. Success rate: ${percentPositive.toFixed(0)}%. Proceed with caution and monitor key variables.`;
+      classification = 'HIGH_RISK';
+      if (hasCatastrophicTail) {
+        reasoning = `Only ${percentPositive.toFixed(0)}% of futures are positive, and the worst 10% show severe losses of ${Math.abs(p10).toFixed(0)}. High downside risk.`;
+      } else {
+        reasoning = `This decision fails in ${percentNegative.toFixed(0)}% of simulated futures. Proceed with caution.`;
+      }
     }
 
     return {
-      classification: 'ROBUST',
-      confidence: 0.45, // Low confidence for borderline cases
+      classification,
       percentPositive,
       percentNegative,
       medianOutcome: median,
       worstCase: p10,
       bestCase: p90,
-      reasoning: borderlineReasoning
+      riskRewardRatio,
+      reasoning
     };
   },
 
   /**
-   * Classify all scenarios in a PRISMA dataset
-   * Includes antifragile detection by running high-variance scenarios
+   * Classify all scenarios — pure statistical analysis, no extra simulations needed.
    *
    * @param {Object} carloResults - Results from Carlo.runCarloAllScenarios()
-   * @param {Object} prismaData - Complete PRISMA_DATA object
-   * @returns {Object} Classification results per scenario: {scenarioId: talebResult}
+   * @param {Object} prismaData - Complete PRISMA_DATA object (unused, kept for API compat)
+   * @returns {Object} Classification results per scenario
    */
   classifyAllScenarios(carloResults, prismaData) {
     const classifications = {};
 
     for (const scenarioId in carloResults) {
-      const normalOutcomes = carloResults[scenarioId].outcomes;
-
-      // Run high-variance scenario for antifragile detection
-      // Double the uncertainty (multiply each variable's range by 2)
-      const highVarData = this._createHighVarianceData(prismaData);
-      const highVarOutcomes = Carlo.runCarlo(highVarData, scenarioId, 500); // Use fewer iterations for speed
-
-      // Classify with both normal and high-variance outcomes
-      const classification = this.classifyTaleb(normalOutcomes, highVarOutcomes);
-      classifications[scenarioId] = classification;
+      classifications[scenarioId] = this.classifyTaleb(carloResults[scenarioId].outcomes);
     }
 
     return classifications;
-  },
-
-  /**
-   * Create a high-variance version of prisma data
-   * (internal helper for antifragile detection)
-   *
-   * @param {Object} prismaData - Original PRISMA_DATA
-   * @returns {Object} Modified PRISMA_DATA with doubled uncertainty ranges
-   */
-  _createHighVarianceData(prismaData) {
-    const highVarData = JSON.parse(JSON.stringify(prismaData)); // Deep clone
-
-    // Double the range for each variable (except fixed distributions)
-    highVarData.variables = highVarData.variables.map(variable => {
-      if (variable.distribution === 'fixed') {
-        return variable;
-      }
-
-      // Double the range around the center value
-      const center = variable.value;
-      const currentRange = variable.max - variable.min;
-      const newRange = currentRange * 2;
 
       return {
         ...variable,
@@ -317,8 +218,12 @@ const Nassim = {
   },
 
   /**
-   * Compute a 0-100 decision score from a Taleb classification result
-   * Maps classification + percentPositive + confidence into a single number
+   * Compute a 0-100 decision score from pure simulation statistics.
+   *
+   * Formula: weighted combination of:
+   *   - % positive outcomes (70% weight — the most important signal)
+   *   - Risk-reward ratio bonus/penalty (20% weight)
+   *   - Median direction bonus (10% weight — positive median = small boost)
    *
    * Score mapping:
    *   80-100 green: "This looks strong"
@@ -334,27 +239,19 @@ const Nassim = {
     if (!classification) return 50;
 
     const pctPositive = classification.percentPositive;
-    const confidence = classification.confidence || 0.5;
-    const cls = classification.classification;
+    const rr = classification.riskRewardRatio || 1;
+    const median = classification.medianOutcome || 0;
 
-    // Base score from percent positive (0-100 range)
-    let score = pctPositive;
+    // 70% weight: percentage of positive outcomes (0-100 → 0-70)
+    let score = pctPositive * 0.7;
 
-    // Classification adjustments — never override fundamentals
-    // A decision with <50% positive outcomes should NEVER score above 60
-    if (cls === 'ANTIFRAGILE') {
-      // Bonus for benefiting from chaos, but capped by actual positive rate
-      score = Math.min(100, score + confidence * 15);
-    } else if (cls === 'ROBUST') {
-      score = Math.min(100, score + confidence * 5);
-    } else if (cls === 'FRAGILE') {
-      score = Math.max(0, score - confidence * 10);
-    }
+    // 20% weight: risk-reward ratio (capped contribution of 0-20 points)
+    // rr > 2 = good (bonus), rr < 0.5 = bad (penalty)
+    const rrBonus = Math.max(-20, Math.min(20, (rr - 1) * 10));
+    score += rrBonus;
 
-    // Hard ceiling: if fewer than 50% of futures are positive, cap at 55
-    if (pctPositive < 50) {
-      score = Math.min(score, 55);
-    }
+    // 10% weight: positive median gets a small boost (0-10 points)
+    if (median > 0) score += 10;
 
     // Clamp to 0-100
     return Math.round(Math.max(0, Math.min(100, score)));
@@ -415,7 +312,7 @@ const Nassim = {
     // Risk: structured parts
     let riskParts = [];
     const p10Str = Visualizations._formatNumber(Math.abs(summary.p10)) + ' ' + unit;
-    if (cls === 'FRAGILE') {
+    if (cls === 'HIGH_RISK') {
       riskParts = [
         { text: 'In the worst 10% of futures, losses reach ' },
         { text: p10Str, bold: true },

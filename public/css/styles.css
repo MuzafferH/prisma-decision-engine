@@ -31,10 +31,11 @@
   --border:  #E5E5E0;
   --border2: #D5D5D0;
 
-  /* Classification (kept for Layer 3 compatibility) */
-  --robust:      #10B981;
-  --fragile:     #EF4444;
-  --antifragile: #8B5CF6;
+  /* Risk classification colors */
+  --strong:        #10B981;
+  --low-risk:      #10B981;
+  --moderate-risk: #F59E0B;
+  --high-risk:     #EF4444;
 
   /* Fonts */
   --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
@@ -1306,9 +1307,10 @@ body {
   margin-bottom: 8px;
 }
 
-.taleb-badge-l3.fragile { border-left-color: var(--fragile); }
-.taleb-badge-l3.robust { border-left-color: var(--robust); }
-.taleb-badge-l3.antifragile { border-left-color: var(--antifragile); }
+.taleb-badge-l3.high_risk { border-left-color: var(--high-risk); }
+.taleb-badge-l3.moderate_risk { border-left-color: var(--moderate-risk); }
+.taleb-badge-l3.low_risk { border-left-color: var(--low-risk); }
+.taleb-badge-l3.strong { border-left-color: var(--strong); }
 
 .taleb-badge-l3 .classification-word {
   font-family: var(--font-sans);
@@ -1318,9 +1320,10 @@ body {
   margin-bottom: 4px;
 }
 
-.taleb-badge-l3 .classification-word.fragile { color: var(--fragile); }
-.taleb-badge-l3 .classification-word.robust { color: var(--robust); }
-.taleb-badge-l3 .classification-word.antifragile { color: var(--antifragile); }
+.taleb-badge-l3 .classification-word.high_risk { color: var(--high-risk); }
+.taleb-badge-l3 .classification-word.moderate_risk { color: var(--moderate-risk); }
+.taleb-badge-l3 .classification-word.low_risk { color: var(--low-risk); }
+.taleb-badge-l3 .classification-word.strong { color: var(--strong); }
 
 .taleb-badge-l3 .classification-reasoning {
   font-family: var(--font-sans);
