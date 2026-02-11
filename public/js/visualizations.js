@@ -79,8 +79,17 @@ const Visualizations = {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Collect dots for batch animation
+    // Collect dots for batch animation and static elements to redraw
     const allDots = [];
+    const staticElements = { zeroX, scenarios: [], width, height, padding };
+
+    // Gaussian random function for clustering dots near median
+    const gaussianRandom = () => {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    };
 
     // Render each scenario
     scenarios.forEach((scenario, scenarioIndex) => {
@@ -96,6 +105,15 @@ const Visualizations = {
       const bandBottom = (scenarioIndex + 1) * bandHeight - padding.bottom;
       const bandMid = (bandTop + bandBottom) / 2;
 
+      // Store static elements for redrawing during animation
+      const staticScenario = {
+        label: scenario.label,
+        color: scenarioColor,
+        bandTop,
+        bandBottom,
+        bandMid
+      };
+
       // Draw scenario label on the left
       ctx.fillStyle = '#e8e8f0';
       ctx.font = '12px Geist, sans-serif';
@@ -103,19 +121,12 @@ const Visualizations = {
       ctx.textBaseline = 'middle';
       ctx.fillText(scenario.label, padding.left - 10, bandMid);
 
-      // Draw dots (store for animation)
-      outcomes.forEach(outcome => {
-        const x = xScale(outcome);
-        const y = bandTop + Math.random() * (bandBottom - bandTop);
-        allDots.push({ x, y, color: scenarioColor });
-      });
-
-      // Draw summary stats: median line + p10-p90 range
+      // Draw summary stats FIRST (so dots appear on top)
       if (summary) {
-        // P10-P90 range rectangle (translucent)
+        // P10-P90 range rectangle (translucent, doubled opacity)
         const p10X = xScale(summary.p10);
         const p90X = xScale(summary.p90);
-        ctx.fillStyle = scenarioColor + '20'; // 20 = hex for ~12% opacity
+        ctx.fillStyle = scenarioColor + '40'; // 40 = hex for ~25% opacity (doubled from 20)
         ctx.fillRect(p10X, bandTop, p90X - p10X, bandBottom - bandTop);
 
         // Median line (solid)
@@ -126,11 +137,25 @@ const Visualizations = {
         ctx.moveTo(medianX, bandTop);
         ctx.lineTo(medianX, bandBottom);
         ctx.stroke();
+
+        staticScenario.p10X = p10X;
+        staticScenario.p90X = p90X;
+        staticScenario.medianX = medianX;
       }
+
+      staticElements.scenarios.push(staticScenario);
+
+      // Collect dots with Gaussian Y distribution
+      outcomes.forEach(outcome => {
+        const x = xScale(outcome);
+        // Use Gaussian distribution for Y to cluster near band center
+        const y = bandMid + gaussianRandom() * (bandBottom - bandTop) * 0.2;
+        allDots.push({ x, y, color: scenarioColor });
+      });
     });
 
-    // Animate dots in batches
-    this._animateDots(ctx, allDots);
+    // Animate dots with waterfall effect
+    this._animateDots(ctx, allDots, staticElements);
 
     // Update stats div below canvas
     if (statsDiv) {
@@ -146,7 +171,21 @@ const Visualizations = {
         statText.style.color = '#8888a0';
         statText.style.marginBottom = '4px';
 
-        statText.textContent = `${scenario.label}: median ${this._formatNumber(s.median)} | ${s.percentPositive.toFixed(0)}% positive | range: ${this._formatNumber(s.min)} to ${this._formatNumber(s.max)}`;
+        // Create colored percentage span using safe DOM methods
+        const percentPositive = s.percentPositive.toFixed(0);
+        const percentColor = percentPositive > 50 ? '#4caf50' : '#ef5350';
+
+        const label = document.createTextNode(`${scenario.label}: median ${this._formatNumber(s.median)} | `);
+        const percentSpan = document.createElement('span');
+        percentSpan.textContent = `${percentPositive}% positive`;
+        percentSpan.style.color = percentColor;
+        percentSpan.style.fontSize = '13px';
+        percentSpan.style.fontWeight = '700';
+        const range = document.createTextNode(` | range: ${this._formatNumber(s.min)} to ${this._formatNumber(s.max)}`);
+
+        statText.appendChild(label);
+        statText.appendChild(percentSpan);
+        statText.appendChild(range);
 
         statsDiv.appendChild(statText);
       });
@@ -154,40 +193,110 @@ const Visualizations = {
   },
 
   /**
-   * Animate Monte Carlo dots appearing in batches
+   * Animate Monte Carlo dots with waterfall effect
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    * @param {Array} dots - Array of {x, y, color} objects
+   * @param {Object} staticElements - Static elements to redraw (zero line, bands, labels)
    */
-  _animateDots(ctx, dots) {
+  _animateDots(ctx, dots, staticElements) {
+    const startTime = performance.now();
+    const totalDuration = 1500; // ms
     const batchSize = 100;
-    const batchDelay = 50; // ms
-    let currentBatch = 0;
+    const batchDelay = 50; // ms between batch releases
 
-    const drawBatch = () => {
-      const start = currentBatch * batchSize;
-      const end = Math.min(start + batchSize, dots.length);
+    // Prepare dots with animation properties
+    const animatedDots = dots.map((dot, index) => {
+      const batchIndex = Math.floor(index / batchSize);
+      return {
+        ...dot,
+        targetY: dot.y,
+        startY: 0,
+        releaseTime: batchIndex * batchDelay,
+        index
+      };
+    });
 
-      for (let i = start; i < end; i++) {
-        const dot = dots[i];
+    const easeOutQuad = (t) => t * (2 - t);
+
+    const redrawStaticElements = () => {
+      const { zeroX, scenarios, width, height, padding } = staticElements;
+
+      // Draw zero line
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(zeroX, 0);
+      ctx.lineTo(zeroX, height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Draw scenario bands and labels
+      scenarios.forEach(scenario => {
+        // Label
+        ctx.fillStyle = '#e8e8f0';
+        ctx.font = '12px Geist, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(scenario.label, padding.left - 10, scenario.bandMid);
+
+        // P10-P90 band
+        if (scenario.p10X && scenario.p90X) {
+          ctx.fillStyle = scenario.color + '40';
+          ctx.fillRect(scenario.p10X, scenario.bandTop, scenario.p90X - scenario.p10X, scenario.bandBottom - scenario.bandTop);
+        }
+
+        // Median line
+        if (scenario.medianX) {
+          ctx.strokeStyle = scenario.color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(scenario.medianX, scenario.bandTop);
+          ctx.lineTo(scenario.medianX, scenario.bandBottom);
+          ctx.stroke();
+        }
+      });
+    };
+
+    const animate = (currentTime) => {
+      const elapsed = currentTime - startTime;
+
+      // Clear canvas
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+      // Redraw static elements
+      redrawStaticElements();
+
+      // Draw animated dots
+      animatedDots.forEach(dot => {
+        const dotElapsed = elapsed - dot.releaseTime;
+
+        if (dotElapsed < 0) return; // Not released yet
+
+        const progress = Math.min(dotElapsed / 600, 1); // 600ms fall duration
+        const easedProgress = easeOutQuad(progress);
+
+        const currentY = dot.startY + (dot.targetY - dot.startY) * easedProgress;
 
         // Draw dot with glow
-        ctx.shadowBlur = 6;
+        ctx.globalAlpha = 0.7;
+        ctx.shadowBlur = 15;
         ctx.shadowColor = dot.color;
         ctx.fillStyle = dot.color;
         ctx.beginPath();
-        ctx.arc(dot.x, dot.y, 2.5, 0, Math.PI * 2);
+        ctx.arc(dot.x, currentY, 3.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
-      }
+        ctx.globalAlpha = 1;
+      });
 
-      currentBatch++;
-
-      if (end < dots.length) {
-        setTimeout(() => requestAnimationFrame(drawBatch), batchDelay);
+      // Continue animation if not complete
+      if (elapsed < totalDuration) {
+        requestAnimationFrame(animate);
       }
     };
 
-    requestAnimationFrame(drawBatch);
+    requestAnimationFrame(animate);
   },
 
   /**
@@ -474,22 +583,25 @@ const Visualizations = {
       label.style.color = '#8888a0';
       badge.appendChild(label);
 
-      // Classification
+      // Classification - MASSIVE with glow
       const classDiv = document.createElement('div');
       classDiv.className = 'badge-classification';
       classDiv.textContent = classification.classification;
       classDiv.style.fontFamily = 'Geist Sans, sans-serif';
-      classDiv.style.fontSize = '14px';
+      classDiv.style.fontSize = '28px';
       classDiv.style.fontWeight = '700';
       classDiv.style.marginBottom = '6px';
+      classDiv.style.letterSpacing = '0.15em';
 
-      // Color based on classification
+      // Color based on classification with text shadow glow
       const colors = {
         FRAGILE: '#ef5350',
         ROBUST: '#4caf50',
         ANTIFRAGILE: '#ab47bc'
       };
-      classDiv.style.color = colors[classification.classification] || '#ffa726';
+      const color = colors[classification.classification] || '#ffa726';
+      classDiv.style.color = color;
+      classDiv.style.textShadow = `0 0 20px ${color}`;
       badge.appendChild(classDiv);
 
       // Stat
@@ -623,7 +735,7 @@ const Visualizations = {
       const p25s = timeline.map(t => t.outcomeP25);
       const p75s = timeline.map(t => t.outcomeP75);
 
-      // Median line
+      // Median line (thicker)
       traces.push({
         x: months,
         y: medians,
@@ -632,18 +744,18 @@ const Visualizations = {
         name: scenario.label,
         line: {
           color: scenario.color || '#4fc3f7',
-          width: 2
+          width: 3
         }
       });
 
-      // Shaded band (P25-P75)
+      // Shaded band (P25-P75) with stronger opacity
       traces.push({
         x: [...months, ...months.reverse()],
         y: [...p75s, ...p25s.reverse()],
         type: 'scatter',
         mode: 'lines',
         fill: 'toself',
-        fillcolor: (scenario.color || '#4fc3f7') + '20',
+        fillcolor: (scenario.color || '#4fc3f7') + '40',
         line: { width: 0 },
         showlegend: false,
         hoverinfo: 'skip'
@@ -671,7 +783,33 @@ const Visualizations = {
       legend: {
         font: { family: 'Geist Sans, sans-serif', color: '#e8e8f0', size: 10 },
         bgcolor: 'transparent'
-      }
+      },
+      shapes: [{
+        type: 'line',
+        x0: 0,
+        x1: 0,
+        y0: 0,
+        y1: 1,
+        yref: 'paper',
+        line: {
+          color: 'rgba(255,255,255,0.3)',
+          width: 1,
+          dash: 'dot'
+        }
+      }],
+      annotations: [{
+        x: 0,
+        y: 1.05,
+        yref: 'paper',
+        xref: 'x',
+        text: 'NOW',
+        showarrow: false,
+        font: {
+          color: '#8888a0',
+          size: 11,
+          family: 'Geist Mono, monospace'
+        }
+      }]
     };
 
     const config = {
