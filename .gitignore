@@ -3,6 +3,8 @@ node_modules/
 __pycache__/
 *.pyc
 .env
+.env.local
 output/
 *.swp
 .claude/
+.vercel

@@ -1,0 +1,9 @@
+{
+  "name": "prisma-decision-engine",
+  "version": "0.1.0",
+  "description": "1,000 futures. One decision. Decision intelligence powered by Monte Carlo, Markov chains, and the Taleb framework.",
+  "private": true,
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0"
+  }
+}
