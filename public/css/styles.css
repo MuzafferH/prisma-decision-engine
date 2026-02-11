@@ -252,6 +252,18 @@ body {
   pointer-events: none;
 }
 
+.chat-option-other {
+  border-style: dashed;
+  color: var(--text3);
+  border-color: var(--text3);
+}
+
+.chat-option-other:hover {
+  background: var(--bg2);
+  color: var(--text);
+  border-color: var(--text2);
+}
+
 /* Typing indicator */
 .typing-indicator-msg {
   align-self: flex-start;

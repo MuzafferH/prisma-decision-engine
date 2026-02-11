@@ -421,17 +421,28 @@ Chat.displayOptions = function(options, parentDiv) {
     chip.textContent = optionText.length > 60 ? optionText.substring(0, 57) + '...' : optionText;
     chip.addEventListener('click', () => {
       if (Chat.isLoading) return;
-      // Bypass 3s throttle for chip clicks
       Chat.lastRequestTime = 0;
-      // Disable all chips visually
       container.querySelectorAll('.chat-option-chip').forEach(c => c.disabled = true);
-      // Set input and send
       const chatInput = document.getElementById('chat-input');
       if (chatInput) chatInput.value = optionText;
       Chat.sendMessage();
     });
     container.appendChild(chip);
   });
+
+  // "Other..." chip — focuses the input so user can type a custom answer
+  const otherChip = document.createElement('button');
+  otherChip.className = 'chat-option-chip chat-option-other';
+  otherChip.textContent = 'Other...';
+  otherChip.addEventListener('click', () => {
+    const chatInput = document.getElementById('chat-input');
+    if (chatInput) {
+      chatInput.focus();
+      chatInput.placeholder = 'Type your answer...';
+    }
+    container.querySelectorAll('.chat-option-chip').forEach(c => c.disabled = true);
+  });
+  container.appendChild(otherChip);
 
   parentDiv.appendChild(container);
 };
