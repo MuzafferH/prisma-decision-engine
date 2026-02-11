@@ -1,0 +1,819 @@
+/* ============================================
+   PRISMA — Decision Intelligence Dashboard
+   Dark Mode Cinematic Theme with Geist Fonts
+   ============================================ */
+
+/* =============================================
+   1. CSS VARIABLES
+   ============================================= */
+
+:root {
+  /* Backgrounds */
+  --bg:     #0a0a0f;
+  --bg2:    #12121a;
+  --bg3:    #1a1a28;
+
+  /* Borders + Glass */
+  --border:  rgba(79, 195, 247, 0.08);
+  --border2: rgba(79, 195, 247, 0.15);
+  --glass:   rgba(79, 195, 247, 0.03);
+
+  /* Text */
+  --text:   #e8e8f0;
+  --text2:  #8888a0;
+  --text3:  #555570;
+
+  /* Accent */
+  --accent:  #4fc3f7;
+  --accent2: #29b6f6;
+  --accent3: #0288d1;
+
+  /* Classification Colors */
+  --robust:      #4caf50;
+  --fragile:     #ef5350;
+  --antifragile: #ab47bc;
+  --uncertain:   #ffa726;
+
+  /* Glow Effects */
+  --glow-accent: rgba(79, 195, 247, 0.08);
+  --glow-robust: rgba(76, 175, 80, 0.15);
+  --glow-fragile: rgba(239, 83, 80, 0.15);
+  --glow-antifragile: rgba(171, 71, 188, 0.15);
+
+  /* Fonts */
+  --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', 'SF Mono', monospace;
+}
+
+/* =============================================
+   2. RESET & BASE
+   ============================================= */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* =============================================
+   3. LAYOUT — SINGLE SCREEN, NO SCROLL
+   ============================================= */
+
+.prisma-app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* HEADER BAR */
+.prisma-header {
+  height: 48px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
+.tagline {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text2);
+  letter-spacing: 0.02em;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.tier-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(79, 195, 247, 0.1);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 4px 12px;
+  letter-spacing: 0.05em;
+}
+
+/* MAIN LAYOUT */
+.prisma-main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* =============================================
+   4. CHAT PANEL (LEFT)
+   ============================================= */
+
+.chat-panel {
+  width: 320px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Chat message bubbles */
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: messageSlideIn 0.3s ease;
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message.user {
+  align-items: flex-end;
+}
+
+.message.prisma {
+  align-items: flex-start;
+}
+
+.message-bubble {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.message.user .message-bubble {
+  background: var(--accent);
+  color: var(--bg);
+  border-bottom-right-radius: 4px;
+}
+
+.message.prisma .message-bubble {
+  background: var(--bg3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+
+/* Typing indicator */
+.typing-indicator {
+  display: inline-flex;
+  gap: 4px;
+  padding: 10px 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  border-bottom-left-radius: 4px;
+}
+
+.typing-indicator span {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 80%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Chat input area */
+.chat-input-area {
+  flex-shrink: 0;
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg3);
+}
+
+#chat-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+#chat-input:focus {
+  border-color: var(--accent);
+}
+
+#chat-input::placeholder {
+  color: var(--text3);
+}
+
+.chat-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+.btn-send {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-send:hover {
+  background: var(--accent2);
+}
+
+.btn-send:active {
+  background: var(--accent3);
+}
+
+.btn-upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-upload:hover {
+  border-color: var(--accent);
+  background: var(--bg3);
+}
+
+.btn-upload span {
+  font-size: 18px;
+}
+
+.privacy-notice {
+  padding: 8px 12px;
+  font-size: 10px;
+  color: var(--text3);
+  line-height: 1.4;
+  font-family: var(--font-sans);
+  border-top: 1px solid var(--border);
+  background: var(--bg3);
+}
+
+/* Scrollbar styling for chat */
+.chat-messages::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: var(--text3);
+  border-radius: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: var(--text2);
+}
+
+/* =============================================
+   5. VISUALIZATION GRID (RIGHT)
+   ============================================= */
+
+.viz-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr auto;
+  gap: 10px;
+  padding: 10px;
+  overflow: hidden;
+}
+
+.viz-full-width {
+  grid-column: 1 / -1;
+}
+
+/* =============================================
+   6. VIZ CARDS (DORMANT → ACTIVE TRANSITION)
+   ============================================= */
+
+.viz-card {
+  background: var(--bg2);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: all 0.8s ease;
+}
+
+.viz-card.dormant {
+  opacity: 0.2;
+  border-color: rgba(255, 255, 255, 0.03);
+}
+
+.viz-card.active {
+  opacity: 1;
+  border-color: var(--border2);
+  box-shadow: 0 0 30px var(--glow-accent);
+}
+
+/* Viz header */
+.viz-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.viz-label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text2);
+}
+
+.viz-crew {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+
+/* Viz content */
+.viz-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Dormant text */
+.dormant-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text3);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.viz-card.active .dormant-text {
+  display: none;
+}
+
+/* =============================================
+   7. MONTE CARLO SECTION
+   ============================================= */
+
+#monte-carlo-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.scenario-stats {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text2);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* =============================================
+   8. TALEB BADGES SECTION
+   ============================================= */
+
+#taleb-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.taleb-badge {
+  padding: 12px;
+  border-radius: 8px;
+  border-left: 3px solid;
+  background: var(--bg3);
+  animation: badgeScaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes badgeScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.taleb-badge.fragile {
+  border-left-color: var(--fragile);
+  box-shadow: 0 0 20px var(--glow-fragile);
+}
+
+.taleb-badge.robust {
+  border-left-color: var(--robust);
+  box-shadow: 0 0 20px var(--glow-robust);
+}
+
+.taleb-badge.antifragile {
+  border-left-color: var(--antifragile);
+  box-shadow: 0 0 20px var(--glow-antifragile);
+}
+
+.taleb-badge-label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+
+.taleb-badge.fragile .taleb-badge-label {
+  color: var(--fragile);
+}
+
+.taleb-badge.robust .taleb-badge-label {
+  color: var(--robust);
+}
+
+.taleb-badge.antifragile .taleb-badge-label {
+  color: var(--antifragile);
+}
+
+.taleb-badge-text {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+/* =============================================
+   9. SENSITIVITY TORNADO SECTION
+   ============================================= */
+
+#tornado-chart {
+  width: 100%;
+  height: 100%;
+}
+
+/* =============================================
+   10. RECOMMENDATIONS SECTION
+   ============================================= */
+
+.rec-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.rec-card {
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--bg3);
+  border-left: 3px solid;
+  animation: recSlideIn 0.6s ease;
+}
+
+@keyframes recSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rec-action {
+  border-left-color: var(--robust);
+}
+
+.rec-watch {
+  border-left-color: var(--uncertain);
+}
+
+.rec-trigger {
+  border-left-color: var(--accent);
+}
+
+.rec-card h4 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text2);
+  margin-bottom: 8px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+
+.rec-card p {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  font-family: var(--font-sans);
+}
+
+/* =============================================
+   11. DISCOVERIES SECTION
+   ============================================= */
+
+#discoveries-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.discovery-card {
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--bg3);
+  border-left: 3px solid var(--uncertain);
+  box-shadow: 0 0 20px rgba(255, 167, 38, 0.1);
+  animation: discoverySlideIn 0.5s ease;
+}
+
+@keyframes discoverySlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.discovery-type {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--uncertain);
+  margin-bottom: 6px;
+}
+
+.discovery-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  font-family: var(--font-sans);
+}
+
+/* =============================================
+   12. UTILITY CLASSES
+   ============================================= */
+
+.hidden {
+  display: none !important;
+}
+
+/* =============================================
+   13. RESPONSIVE
+   ============================================= */
+
+@media (max-width: 1280px) {
+  .chat-panel {
+    width: 280px;
+  }
+
+  .tagline {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .prisma-main {
+    flex-direction: column;
+  }
+
+  .chat-panel {
+    width: 100%;
+    height: 40%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .viz-grid {
+    height: 60%;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .rec-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =============================================
+   14. CAUSAL GRAPH (HTML/SVG NODES)
+   ============================================= */
+
+#causal-graph-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+}
+
+.causal-node {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+  animation: nodeSlideIn 0.5s ease;
+}
+
+@keyframes nodeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* =============================================
+   15. INTERACTIVE SLIDERS
+   ============================================= */
+
+.slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: var(--bg3);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text2);
+}
+
+.slider-value {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+input[type="range"] {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--glow-accent);
+  transition: all 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 16px var(--glow-accent);
+  transform: scale(1.1);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--glow-accent);
+  transition: all 0.2s ease;
+  border: none;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  box-shadow: 0 0 16px var(--glow-accent);
+  transform: scale(1.1);
+}

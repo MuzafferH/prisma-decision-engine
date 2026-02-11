@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRISMA — 1,000 futures. One decision.</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet">
+  <!-- External libs -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <div class="prisma-app">
+    <!-- HEADER -->
+    <header class="prisma-header">
+      <div class="header-left">
+        <span class="logo">PRISMA</span>
+        <span class="tagline">1,000 futures. One decision.</span>
+      </div>
+      <div class="header-right">
+        <span class="tier-badge" id="tier-badge">Tier 1</span>
+      </div>
+    </header>
+
+    <!-- MAIN: Chat + Viz Grid -->
+    <main class="prisma-main">
+      <!-- CHAT PANEL -->
+      <aside class="chat-panel">
+        <div class="chat-messages" id="chat-messages">
+          <!-- Messages rendered here by chat.js -->
+        </div>
+        <div class="chat-input-area">
+          <textarea id="chat-input" placeholder="Describe your decision..." rows="2"></textarea>
+          <div class="chat-actions">
+            <button class="btn-send" id="send-btn">Send</button>
+            <label class="btn-upload" for="file-upload">
+              <span>📎</span>
+            </label>
+            <input type="file" id="file-upload" accept=".csv" multiple hidden>
+          </div>
+        </div>
+        <div class="privacy-notice">
+          Processed by Anthropic API. Not stored. Don't share passwords or credentials.
+        </div>
+      </aside>
+
+      <!-- VISUALIZATION GRID -->
+      <div class="viz-grid">
+        <!-- Row 1: Causal Graph + Monte Carlo -->
+        <div class="viz-card dormant" id="causal-section">
+          <div class="viz-header">
+            <span class="viz-label">How Your Business Connects</span>
+            <span class="viz-crew">Carlo &amp; Team</span>
+          </div>
+          <div class="viz-content" id="causal-graph-container">
+            <div class="dormant-text">Awaiting your decision...</div>
+          </div>
+        </div>
+
+        <div class="viz-card dormant" id="monte-carlo-section">
+          <div class="viz-header">
+            <span class="viz-label">1,000 Possible Futures</span>
+            <span class="viz-crew">Carlo</span>
+          </div>
+          <div class="viz-content">
+            <canvas id="monte-carlo-canvas"></canvas>
+            <div id="scenario-stats" class="scenario-stats"></div>
+            <div class="dormant-text">Awaiting your decision...</div>
+          </div>
+        </div>
+
+        <!-- Row 2: Taleb + Sensitivity -->
+        <div class="viz-card dormant" id="taleb-section">
+          <div class="viz-header">
+            <span class="viz-label">Nassim's Verdict</span>
+            <span class="viz-crew">Nassim</span>
+          </div>
+          <div class="viz-content" id="taleb-badges">
+            <div class="dormant-text">Awaiting analysis...</div>
+          </div>
+        </div>
+
+        <div class="viz-card dormant" id="sensitivity-section">
+          <div class="viz-header">
+            <span class="viz-label">What Matters Most</span>
+            <span class="viz-crew">Nassim</span>
+          </div>
+          <div class="viz-content">
+            <div id="tornado-chart"></div>
+            <div class="dormant-text">Awaiting analysis...</div>
+          </div>
+        </div>
+
+        <!-- Row 3: Recommendations (full width) -->
+        <div class="viz-card viz-full-width dormant" id="recommendation-section">
+          <div class="viz-header">
+            <span class="viz-label">Your Decision</span>
+          </div>
+          <div class="rec-grid">
+            <div class="rec-card rec-action">
+              <h4>WHAT TO DO</h4>
+              <p id="rec-action-text">Awaiting analysis...</p>
+            </div>
+            <div class="rec-card rec-watch">
+              <h4>WHAT TO WATCH</h4>
+              <p id="rec-watch-text">Awaiting analysis...</p>
+            </div>
+            <div class="rec-card rec-trigger">
+              <h4>WHEN TO CHANGE YOUR MIND</h4>
+              <p id="rec-trigger-text">Awaiting analysis...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Discoveries (hidden until Tier 2) -->
+        <div class="viz-card viz-full-width hidden" id="discoveries-section">
+          <div class="viz-header">
+            <span class="viz-label">Hidden Insights</span>
+            <span class="viz-crew">Discovery</span>
+          </div>
+          <div id="discoveries-container"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts in correct load order -->
+  <script src="/js/carlo.js"></script>
+  <script src="/js/markov.js"></script>
+  <script src="/js/nassim.js"></script>
+  <!-- These will be created in later tasks: -->
+  <!-- <script src="/js/visualizations.js"></script> -->
+  <!-- <script src="/js/dashboard.js"></script> -->
+  <!-- <script src="/js/chat.js"></script> -->
+</body>
+</html>
