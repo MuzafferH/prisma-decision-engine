@@ -757,6 +757,128 @@ const Visualizations = {
   },
 
   /**
+   * Render interactive sliders for input variables
+   * Allows users to adjust variables and re-run simulations
+   *
+   * @param {Object} prismaState - Full PRISMA_DATA state
+   */
+  renderSliders(prismaState) {
+    const container = document.getElementById('sliders-container');
+    if (!container) {
+      console.warn('Sliders container not found');
+      return;
+    }
+
+    // Clear existing sliders
+    container.textContent = '';
+
+    const variables = prismaState.variables || [];
+    const inputVars = variables.filter(v => v.isInput);
+
+    if (inputVars.length === 0) {
+      console.log('No input variables to render');
+      return;
+    }
+
+    // Create sliders for each input variable
+    inputVars.forEach(variable => {
+      const sliderGroup = document.createElement('div');
+      sliderGroup.className = 'slider-group';
+
+      // Header row: label + value + unit
+      const sliderHeader = document.createElement('div');
+      sliderHeader.className = 'slider-header';
+
+      const label = document.createElement('label');
+      label.textContent = variable.label || variable.id;
+      label.style.fontFamily = 'Geist Sans, sans-serif';
+      label.style.fontSize = '12px';
+      label.style.fontWeight = '600';
+      label.style.color = '#e8e8f0';
+      sliderHeader.appendChild(label);
+
+      const valueSpan = document.createElement('span');
+      valueSpan.className = 'slider-value';
+      valueSpan.textContent = this._formatNumber(variable.value);
+      valueSpan.style.fontFamily = 'Geist Mono, monospace';
+      valueSpan.style.fontSize = '12px';
+      valueSpan.style.fontWeight = '600';
+      valueSpan.style.color = '#4fc3f7';
+      sliderHeader.appendChild(valueSpan);
+
+      if (variable.unit) {
+        const unitSpan = document.createElement('span');
+        unitSpan.className = 'slider-unit';
+        unitSpan.textContent = variable.unit;
+        unitSpan.style.fontFamily = 'Geist Mono, monospace';
+        unitSpan.style.fontSize = '11px';
+        unitSpan.style.color = '#8888a0';
+        unitSpan.style.marginLeft = '4px';
+        sliderHeader.appendChild(unitSpan);
+      }
+
+      sliderGroup.appendChild(sliderHeader);
+
+      // Slider input
+      const input = document.createElement('input');
+      input.type = 'range';
+      input.min = variable.min || 0;
+      input.max = variable.max || 100;
+      input.value = variable.value || 50;
+      input.step = this._calculateStep(variable);
+
+      // Debounced rerun
+      let sliderTimeout = null;
+      input.addEventListener('input', (e) => {
+        valueSpan.textContent = this._formatNumber(parseFloat(e.target.value));
+        clearTimeout(sliderTimeout);
+        sliderTimeout = setTimeout(() => {
+          if (typeof Dashboard !== 'undefined' && Dashboard.rerunWithSliders) {
+            Dashboard.rerunWithSliders(variable.id, parseFloat(e.target.value));
+          }
+        }, 150);
+      });
+
+      sliderGroup.appendChild(input);
+
+      // Range labels (min and max)
+      const sliderRange = document.createElement('div');
+      sliderRange.className = 'slider-range';
+      sliderRange.style.display = 'flex';
+      sliderRange.style.justifyContent = 'space-between';
+      sliderRange.style.fontFamily = 'Geist Mono, monospace';
+      sliderRange.style.fontSize = '10px';
+      sliderRange.style.color = '#555570';
+      sliderRange.style.marginTop = '4px';
+
+      const minSpan = document.createElement('span');
+      minSpan.textContent = this._formatNumber(variable.min || 0);
+      sliderRange.appendChild(minSpan);
+
+      const maxSpan = document.createElement('span');
+      maxSpan.textContent = this._formatNumber(variable.max || 100);
+      sliderRange.appendChild(maxSpan);
+
+      sliderGroup.appendChild(sliderRange);
+
+      container.appendChild(sliderGroup);
+    });
+  },
+
+  /**
+   * Calculate appropriate step size for slider based on variable range
+   * @param {Object} variable - Variable object
+   * @returns {number} Step size
+   */
+  _calculateStep(variable) {
+    const range = (variable.max || 100) - (variable.min || 0);
+    if (range <= 10) return 0.1;
+    if (range <= 100) return 1;
+    if (range <= 1000) return 10;
+    return 100;
+  },
+
+  /**
    * Helper: Format number for display
    * @param {number} num - Number to format
    * @returns {string} Formatted string

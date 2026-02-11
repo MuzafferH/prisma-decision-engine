@@ -648,11 +648,11 @@ body {
 }
 
 .discovery-card {
-  padding: 14px;
+  padding: 16px;
   border-radius: 8px;
   background: var(--bg3);
-  border-left: 3px solid var(--uncertain);
-  box-shadow: 0 0 20px rgba(255, 167, 38, 0.1);
+  border: 1px solid rgba(255, 167, 38, 0.2);
+  margin-bottom: 8px;
   animation: discoverySlideIn 0.5s ease;
 }
 
@@ -665,6 +665,57 @@ body {
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+.discovery-badge {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.discovery-pattern {
+  background: rgba(79, 195, 247, 0.15);
+  color: var(--accent);
+}
+
+.discovery-risk {
+  background: rgba(239, 83, 80, 0.15);
+  color: var(--fragile);
+}
+
+.discovery-opportunity {
+  background: rgba(76, 175, 80, 0.15);
+  color: var(--robust);
+}
+
+.discovery-card h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  font-family: var(--font-sans);
+}
+
+.discovery-card p {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  font-family: var(--font-sans);
+  margin-bottom: 8px;
+}
+
+.discovery-impact {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--uncertain);
+  display: block;
+  margin-top: 8px;
 }
 
 .discovery-type {
@@ -767,6 +818,32 @@ body {
    15. INTERACTIVE SLIDERS
    ============================================= */
 
+.sliders-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: var(--bg3);
+  border-radius: 6px;
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
 .slider-container {
   display: flex;
   flex-direction: column;
@@ -788,6 +865,15 @@ body {
 .slider-value {
   color: var(--accent);
   font-weight: 600;
+}
+
+.slider-range {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 4px;
 }
 
 input[type="range"] {
