@@ -387,8 +387,53 @@ Chat.displayMessage = function(role, text) {
 
   chatMessages.appendChild(messageDiv);
 
+  // Detect numbered options in assistant messages (last paragraph only)
+  if (role === 'assistant') {
+    const lastPara = paragraphs[paragraphs.length - 1];
+    if (lastPara) {
+      const lines = lastPara.trim().split('\n');
+      const optionRegex = /^\d+\.\s+(.+)$/;
+      const allOptions = lines.every(line => optionRegex.test(line.trim()));
+      if (allOptions && lines.length >= 2 && lines.length <= 6) {
+        const options = lines.map(line => {
+          const match = line.trim().match(optionRegex);
+          return match ? match[1].replace(/\*\*/g, '').trim() : line.trim();
+        });
+        Chat.displayOptions(options, messageDiv);
+      }
+    }
+  }
+
   // Auto-scroll to bottom
   chatMessages.scrollTop = chatMessages.scrollHeight;
+};
+
+// Display clickable option chips below an assistant message
+Chat.displayOptions = function(options, parentDiv) {
+  if (!options || options.length === 0) return;
+
+  const container = document.createElement('div');
+  container.className = 'chat-options';
+
+  options.forEach(optionText => {
+    const chip = document.createElement('button');
+    chip.className = 'chat-option-chip';
+    chip.textContent = optionText.length > 60 ? optionText.substring(0, 57) + '...' : optionText;
+    chip.addEventListener('click', () => {
+      if (Chat.isLoading) return;
+      // Bypass 3s throttle for chip clicks
+      Chat.lastRequestTime = 0;
+      // Disable all chips visually
+      container.querySelectorAll('.chat-option-chip').forEach(c => c.disabled = true);
+      // Set input and send
+      const chatInput = document.getElementById('chat-input');
+      if (chatInput) chatInput.value = optionText;
+      Chat.sendMessage();
+    });
+    container.appendChild(chip);
+  });
+
+  parentDiv.appendChild(container);
 };
 
 // Show typing indicator

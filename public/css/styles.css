@@ -219,6 +219,39 @@ body {
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
+/* -- Chat Option Chips -- */
+.chat-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.chat-option-chip {
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1.3;
+}
+
+.chat-option-chip:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.chat-option-chip:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 /* Typing indicator */
 .typing-indicator-msg {
   align-self: flex-start;
@@ -535,6 +568,11 @@ body {
   transition: border-color 0.3s ease;
 }
 
+.rec-card.refining p {
+  opacity: 0.12;
+  transition: opacity 0.3s ease;
+}
+
 .rec-card.refining::after {
   content: '';
   position: absolute;
@@ -556,12 +594,13 @@ body {
 .rec-card .refining-label {
   display: none;
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
   color: var(--accent);
   opacity: 0.65;
   margin-top: 6px;
+  text-align: center;
 }
 
 .rec-card.refining .refining-label {
@@ -766,11 +805,12 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: none;
+  background: rgba(37, 99, 235, 0.04);
   border: none;
-  padding: 6px 0;
+  padding: 8px 14px;
+  border-radius: 8px;
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text3);
   cursor: pointer;

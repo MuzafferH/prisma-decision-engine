@@ -769,6 +769,9 @@ Dashboard._renderSliderUpdate = function() {
 
   // --- Dynamic Recommendations ---
   if (anySliderMoved) {
+    // Immediately shimmer rec cards so stale text fades out during crossfade
+    Dashboard._setRecCardsRefining(true);
+
     // Sliders moved → generate template recs and crossfade
     Dashboard._recState = 'updated';
     const dynamicRecs = Dashboard.generateDynamicRecommendations();
@@ -781,7 +784,8 @@ Dashboard._renderSliderUpdate = function() {
       Dashboard._startAIRefinement();
     }
   } else {
-    // All sliders at baseline → restore original recs
+    // All sliders at baseline → clear shimmer and restore original recs
+    Dashboard._setRecCardsRefining(false);
     if (Dashboard._recState !== 'baseline' && Dashboard._originalRecommendation) {
       Dashboard._recState = 'baseline';
       Dashboard._cancelAIRefinement();
