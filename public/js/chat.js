@@ -2,7 +2,7 @@
 // Chat interface logic for Prisma dashboard
 
 // MOCK MODE for local testing without Vercel deployment
-const MOCK_MODE = true; // Set to false when deployed
+const MOCK_MODE = false; // Live mode — real Claude API calls via /api/chat
 
 const Chat = {
   messages: [],           // Conversation history [{role, content}]

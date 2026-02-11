@@ -27,13 +27,11 @@
       </div>
     </header>
 
-    <!-- MAIN: Chat + Viz Grid -->
+    <!-- MAIN: Chat (45%) + Answer Panel (55%) -->
     <main class="prisma-main">
       <!-- CHAT PANEL -->
       <aside class="chat-panel">
-        <div class="chat-messages" id="chat-messages">
-          <!-- Messages rendered here by chat.js -->
-        </div>
+        <div class="chat-messages" id="chat-messages"></div>
         <div class="chat-input-area">
           <textarea id="chat-input" placeholder="Describe your decision..." rows="2"></textarea>
           <div class="chat-actions">
@@ -49,85 +47,176 @@
         </div>
       </aside>
 
-      <!-- VISUALIZATION GRID -->
-      <div class="viz-grid">
-        <!-- Row 1: Causal Graph + Monte Carlo -->
-        <div class="viz-card dormant" id="causal-section">
-          <div class="viz-header">
-            <span class="viz-label">How Your Business Connects</span>
-            <span class="viz-crew">Carlo &amp; Team</span>
-          </div>
-          <div class="viz-content" id="causal-graph-container">
-            <div class="dormant-text">Awaiting your decision...</div>
+      <!-- ANSWER PANEL -->
+      <div class="answer-panel" id="answer-panel">
+
+        <!-- Dormant state (shown before analysis) -->
+        <div class="answer-panel-dormant" id="panel-dormant">
+          <div class="dormant-message">
+            <div class="dormant-icon">&#9670;</div>
+            <p>Describe your decision in the chat.<br>Prisma will show you 1,000 possible futures.</p>
           </div>
         </div>
 
-        <div class="viz-card dormant" id="monte-carlo-section">
-          <div class="viz-header">
-            <span class="viz-label">1,000 Possible Futures</span>
-            <span class="viz-crew">Carlo</span>
-          </div>
-          <div class="viz-content">
-            <canvas id="monte-carlo-canvas"></canvas>
-            <div id="scenario-stats" class="scenario-stats"></div>
-            <div id="sliders-container" class="sliders-container"></div>
-            <div class="dormant-text">Awaiting your decision...</div>
-          </div>
-        </div>
+        <!-- LAYER 1: The Verdict -->
+        <div class="layer-1" id="layer-1">
 
-        <!-- Row 2: Taleb + Sensitivity -->
-        <div class="viz-card dormant" id="taleb-section">
-          <div class="viz-header">
-            <span class="viz-label">Nassim's Verdict</span>
-            <span class="viz-crew">Nassim</span>
-          </div>
-          <div class="viz-content" id="taleb-badges">
-            <div class="dormant-text">Awaiting analysis...</div>
-          </div>
-        </div>
+          <!-- Simulation badge -->
+          <div class="simulation-badge" id="simulation-badge"></div>
 
-        <div class="viz-card dormant" id="sensitivity-section">
-          <div class="viz-header">
-            <span class="viz-label">What Matters Most</span>
-            <span class="viz-crew">Nassim</span>
+          <!-- Score Circle + Verdict Text -->
+          <div class="verdict-card">
+            <div class="score-circle-container" id="score-circle"></div>
+            <div class="verdict-text">
+              <div class="verdict-headline" id="verdict-headline">Analyzing...</div>
+              <div class="verdict-summary" id="verdict-summary"></div>
+              <div class="verdict-risk" id="verdict-risk"></div>
+            </div>
           </div>
-          <div class="viz-content">
-            <div id="tornado-chart"></div>
-            <div class="dormant-text">Awaiting analysis...</div>
-          </div>
-        </div>
 
-        <!-- Row 3: Recommendations (full width) -->
-        <div class="viz-card viz-full-width dormant" id="recommendation-section">
-          <div class="viz-header">
-            <span class="viz-label">Your Decision</span>
-          </div>
-          <div class="rec-grid">
-            <div class="rec-card rec-action">
-              <h4>WHAT TO DO</h4>
-              <p id="rec-action-text">Awaiting analysis...</p>
+          <!-- Recommendation Triptych -->
+          <div class="rec-triptych" id="rec-triptych">
+            <div class="rec-card rec-do">
+              <h4>Do this</h4>
+              <p id="rec-do-text">Awaiting analysis...</p>
             </div>
             <div class="rec-card rec-watch">
-              <h4>WHAT TO WATCH</h4>
+              <h4>Watch this</h4>
               <p id="rec-watch-text">Awaiting analysis...</p>
             </div>
-            <div class="rec-card rec-trigger">
-              <h4>WHEN TO CHANGE YOUR MIND</h4>
-              <p id="rec-trigger-text">Awaiting analysis...</p>
+            <div class="rec-card rec-pivot">
+              <h4>Change if...</h4>
+              <p id="rec-pivot-text">Awaiting analysis...</p>
             </div>
           </div>
+
+          <!-- Front-Page What-If Sliders -->
+          <div class="front-sliders" id="front-sliders"></div>
+          <div class="front-sliders-more hidden" id="front-sliders-more"></div>
+          <button class="more-vars-btn hidden" id="more-vars-btn">
+            More variables <span class="chevron">&#9660;</span>
+          </button>
+          <button class="reset-sliders-btn hidden" id="reset-sliders-btn">Reset all</button>
+
+          <!-- Show me why button -->
+          <button class="show-why-btn" id="show-why-btn">
+            Show me why <span class="chevron">&#9660;</span>
+          </button>
         </div>
 
-        <!-- Discoveries (hidden until Tier 2) -->
-        <div class="viz-card viz-full-width hidden" id="discoveries-section">
-          <div class="viz-header">
-            <span class="viz-label">Hidden Insights</span>
-            <span class="viz-crew">Discovery</span>
+        <!-- LAYER 2: The Evidence (collapsed) -->
+        <div class="layer-2" id="layer-2">
+
+          <!-- Outcome Range Bar -->
+          <div class="range-bar-section">
+            <h3>Outcome distribution</h3>
+            <div class="range-bar-container" id="range-bar-container">
+              <div class="range-bar-canvas-wrap">
+                <canvas id="range-bar-canvas"></canvas>
+              </div>
+              <div class="range-bar-summary" id="range-bar-summary"></div>
+            </div>
           </div>
+
+          <!-- Scenario Comparison -->
+          <div class="scenario-comparison" id="scenario-comparison">
+            <h3>Scenario comparison</h3>
+            <!-- Rows rendered by JS -->
+          </div>
+
+          <!-- What Matters Most -->
+          <div class="sensitivity-section">
+            <h3>What matters most</h3>
+            <div class="sensitivity-list" id="sensitivity-list">
+              <!-- Items rendered by JS -->
+            </div>
+          </div>
+
+          <!-- Simulation Count Selector (power-user control) -->
+          <div class="sim-count-toggle" id="sim-count-toggle">
+            <button class="sim-count-btn active" data-count="1000">
+              <span class="sim-count-num">1,000</span>
+              <span class="sim-count-label">Fast</span>
+            </button>
+            <button class="sim-count-btn" data-count="5000">
+              <span class="sim-count-num">5,000</span>
+              <span class="sim-count-label">Balanced</span>
+            </button>
+            <button class="sim-count-btn" data-count="10000">
+              <span class="sim-count-num">10,000</span>
+              <span class="sim-count-label">Precise</span>
+            </button>
+          </div>
+          <div class="sim-count-hint">Higher = more precise results, slower updates</div>
+
+          <!-- See full simulation -->
+          <button class="see-full-btn" id="see-full-btn">
+            See full simulation &#8594;
+          </button>
+        </div>
+
+        <!-- Discoveries (Tier 2) -->
+        <div class="hidden" id="discoveries-section">
           <div id="discoveries-container"></div>
         </div>
       </div>
     </main>
+  </div>
+
+  <!-- LAYER 3: The Engine Room (slide-over panel) -->
+  <div class="layer-3-overlay" id="layer-3-overlay"></div>
+  <div class="layer-3-panel" id="layer-3-panel">
+    <div class="layer-3-header">
+      <h2>Full Simulation</h2>
+      <button class="layer-3-close" id="layer-3-close">Close</button>
+    </div>
+    <div class="layer-3-content" id="layer-3-content">
+
+      <!-- Carlo Section -->
+      <div class="engine-section">
+        <div class="engine-section-header">Carlo — 1,000 Possible Futures</div>
+        <div class="engine-monte-carlo" id="engine-monte-carlo-section">
+          <canvas id="monte-carlo-canvas"></canvas>
+        </div>
+        <div class="engine-stats" id="scenario-stats"></div>
+      </div>
+
+      <!-- Nassim Section -->
+      <div class="engine-section">
+        <div class="engine-section-header">Nassim — Classification</div>
+        <div id="taleb-badges"></div>
+      </div>
+
+      <!-- Sensitivity Section (Plotly Tornado) -->
+      <div class="engine-section">
+        <div class="engine-section-header">Nassim — Sensitivity Analysis</div>
+        <div class="engine-chart" id="tornado-chart"></div>
+      </div>
+
+      <!-- Markov Section -->
+      <div class="engine-section">
+        <div class="engine-section-header">Markov — Timeline</div>
+        <div class="engine-chart" id="markov-timeline"></div>
+      </div>
+
+      <!-- Causal Graph Section -->
+      <div class="engine-section">
+        <div class="engine-section-header">Causal Graph</div>
+        <div class="engine-causal" id="causal-graph-container"></div>
+      </div>
+
+      <!-- Interactive Sliders -->
+      <div class="engine-section">
+        <div class="engine-section-header">Adjust Variables</div>
+        <div class="engine-sliders" id="sliders-container"></div>
+      </div>
+
+      <!-- Raw Stats -->
+      <div class="engine-section">
+        <div class="engine-section-header">Raw Statistics</div>
+        <div id="raw-stats-container"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Scripts in correct load order -->

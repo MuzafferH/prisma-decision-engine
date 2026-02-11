@@ -32,7 +32,7 @@ const DEMO_DATA = {
       value: 80,
       min: 60,
       max: 110,
-      distribution: "right_skewed",
+      distribution: "normal",
       unit: "deliveries/day",
       isInput: true
     },
@@ -60,9 +60,9 @@ const DEMO_DATA = {
       id: "cost_per_delivery",
       label: "Cost per Delivery",
       value: 2.80,
-      min: 2.20,
-      max: 4.50,
-      distribution: "right_skewed",
+      min: 2.40,
+      max: 3.60,
+      distribution: "normal",
       unit: "€",
       isInput: false
     },
@@ -232,8 +232,10 @@ const DEMO_DATA = {
           min: 7,
           max: 7
         },
-        monthly_driver_cost: {
-          delta: 6400
+        daily_deliveries: {
+          value: 100,
+          min: 80,
+          max: 130
         },
         overtime_hours_weekly: {
           value: 4,
@@ -268,7 +270,7 @@ const DEMO_DATA = {
         cost_per_delivery: {
           value: 2.52,
           min: 2.10,
-          max: 4.00,
+          max: 3.20,
           delta: -0.28
         },
         fuel_cost_monthly: {
@@ -290,7 +292,23 @@ const DEMO_DATA = {
       id: "do_nothing",
       label: "Do Nothing",
       color: "#ef5350",
-      changes: {},
+      changes: {
+        daily_deliveries: {
+          value: 70,
+          min: 50,
+          max: 90
+        },
+        driver_reliability: {
+          value: 0.60,
+          min: 0.35,
+          max: 0.75
+        },
+        overtime_hours_weekly: {
+          value: 20,
+          min: 12,
+          max: 35
+        }
+      },
       assumptions: [
         "Current trends continue with no intervention",
         "Driver reliability continues to decline at ~2% per month",
@@ -305,7 +323,7 @@ const DEMO_DATA = {
     id: "monthly_profit_delta",
     label: "Monthly Profit Change",
     unit: "€/month",
-    formula: "monthly_revenue - (cost_per_delivery * daily_deliveries * 30) - (monthly_driver_cost * driver_count) - fuel_cost_monthly",
+    formula: "(daily_deliveries * 30 * 20) - (cost_per_delivery * daily_deliveries * 30) - (monthly_driver_cost * driver_count) - fuel_cost_monthly",
     positiveLabel: "Profit Gain",
     negativeLabel: "Profit Loss"
   },

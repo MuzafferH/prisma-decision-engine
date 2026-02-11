@@ -10,6 +10,31 @@
  * This is intentional for the simulation engine to evaluate mathematical formulas.
  */
 
+/**
+ * Validate a formula string to prevent code injection.
+ * Only allows: variable names, numbers, basic math ops, Math.* functions, parens, commas, dots.
+ * Rejects anything that could access globals, DOM, network, or eval.
+ */
+function validateFormula(formula) {
+  if (typeof formula !== 'string') return false;
+  if (formula.length > 1000) return false;
+
+  // Blocklist: dangerous tokens that should never appear in a math formula
+  const dangerous = /\b(fetch|eval|import|require|document|window|globalThis|self|top|parent|frames|constructor|prototype|__proto__|Function|setTimeout|setInterval|XMLHttpRequest|WebSocket|Worker|Blob|URL|location|navigator|alert|confirm|prompt|console|process|child_process|exec|spawn)\b/;
+  if (dangerous.test(formula)) return false;
+
+  // Reject template literals, assignment operators (except ==), and bracket access
+  if (/[`\[\]]/.test(formula)) return false;
+  if (/[^=!<>]=[^=]/.test(formula)) return false;
+
+  // Allowlist: only permit safe characters
+  // Letters (variable names / Math), digits, math ops, parens, dots, commas, spaces, underscores, ternary
+  const allowed = /^[a-zA-Z0-9_\s+\-*/%().,:?<>=!&|^~]+$/;
+  if (!allowed.test(formula)) return false;
+
+  return true;
+}
+
 const Carlo = {
   /**
    * Sample a random value from a variable's distribution
@@ -149,17 +174,22 @@ const Carlo = {
         if (processed.has(edgeKey)) continue;
 
         if (edge.formula) {
-          // Use explicit formula if provided
+          // Use explicit formula if provided (validated against injection)
           try {
-            // Create a safe evaluation context with all variable values
             const evalContext = { ...values, Math };
-            const formula = edge.formula.split('=')[1].trim(); // Extract right side
-            const evalFunc = new Function(...Object.keys(evalContext), `return ${formula}`);
-            const result = evalFunc(...Object.values(evalContext));
+            const formula = edge.formula.split('=')[1].trim();
+            if (!validateFormula(formula)) {
+              console.warn(`Rejected unsafe formula for edge ${edge.from}->${edge.to}`);
+            } else {
+              // NOTE: new Function() is intentional here — formulas are AI-generated math
+              // expressions that have been validated by validateFormula() above.
+              const evalFunc = new Function(...Object.keys(evalContext), `return ${formula}`);
+              const result = evalFunc(...Object.values(evalContext));
 
-            if (!isNaN(result) && isFinite(result)) {
-              values[edge.to] = result;
-              changed = true;
+              if (!isNaN(result) && isFinite(result)) {
+                values[edge.to] = result;
+                changed = true;
+              }
             }
           } catch (e) {
             console.warn(`Formula evaluation failed for edge ${edge.from}->${edge.to}:`, e.message);
@@ -170,8 +200,6 @@ const Carlo = {
           const effect = edge.effect === 'positive' ? 1 : -1;
           const strength = edge.strength || 0.5;
 
-          // Scale the propagation: target += source * strength * scaling_factor
-          // Use 0.1 as scaling factor to keep effects reasonable
           const delta = sourceValue * strength * 0.1 * effect;
           values[edge.to] = currentValue + delta;
           changed = true;
@@ -181,16 +209,20 @@ const Carlo = {
       }
     }
 
-    // Calculate final outcome using the formula
+    // Calculate final outcome using the formula (validated against injection)
     if (outcomeFormula) {
+      if (!validateFormula(outcomeFormula)) {
+        console.warn('Rejected unsafe outcome formula');
+        return 0;
+      }
       try {
         const evalContext = { ...values, Math };
+        // NOTE: new Function() is intentional — validated math formula from AI
         const evalFunc = new Function(...Object.keys(evalContext), `return ${outcomeFormula}`);
         const outcome = evalFunc(...Object.values(evalContext));
         return outcome;
       } catch (e) {
         console.warn(`Outcome formula evaluation failed:`, e.message);
-        // Fallback: return the outcome variable directly if it exists in values
         return values[outcomeFormula] || 0;
       }
     }
@@ -217,9 +249,25 @@ const Carlo = {
     // Apply scenario changes to variables
     const scenarioVariables = this.applyScenarioChanges(prismaData.variables, scenario);
 
-    // Get baseline monthly profit for delta calculation
-    const baselineProfit = prismaData.variables.find(v => v.id === 'monthly_profit');
-    const baselineProfitValue = baselineProfit ? baselineProfit.value : 0;
+    // Calculate baseline profit using formula with default variable values
+    let baselineProfitValue = 0;
+    const outcomeFormulaBaseline = prismaData.outcome?.formula;
+    if (outcomeFormulaBaseline && validateFormula(outcomeFormulaBaseline)) {
+      try {
+        const baseValues = {};
+        for (const v of prismaData.variables) {
+          baseValues[v.id] = v.value;
+        }
+        const varNames = Object.keys(baseValues);
+        const varVals = Object.values(baseValues);
+        // NOTE: new Function() is intentional — validated math formula from AI
+        const baseFunc = new Function(...varNames, 'return ' + outcomeFormulaBaseline);
+        baselineProfitValue = baseFunc(...varVals);
+        if (isNaN(baselineProfitValue) || !isFinite(baselineProfitValue)) baselineProfitValue = 0;
+      } catch (e) {
+        baselineProfitValue = 0;
+      }
+    }
 
     const outcomes = [];
 
@@ -241,23 +289,24 @@ const Carlo = {
         if (sourceValue === undefined) continue;
 
         if (edge.formula) {
-          // Use explicit formula
+          // Use explicit formula (validated against injection)
           try {
             const evalContext = { ...values, Math };
-            // Extract the right side of the assignment
             const formulaParts = edge.formula.split('=');
             if (formulaParts.length >= 2) {
               const targetVar = formulaParts[0].trim();
               const expression = formulaParts.slice(1).join('=').trim();
 
-              // Create function with all variables in scope
-              const varNames = Object.keys(evalContext);
-              const varValues = Object.values(evalContext);
-              const evalFunc = new Function(...varNames, `return ${expression}`);
-              const result = evalFunc(...varValues);
+              if (validateFormula(expression)) {
+                const varNames = Object.keys(evalContext);
+                const varValues = Object.values(evalContext);
+                // NOTE: new Function() is intentional — validated math formula from AI
+                const evalFunc = new Function(...varNames, `return ${expression}`);
+                const result = evalFunc(...varValues);
 
-              if (!isNaN(result) && isFinite(result)) {
-                values[targetVar] = result;
+                if (!isNaN(result) && isFinite(result)) {
+                  values[targetVar] = result;
+                }
               }
             }
           } catch (e) {
@@ -275,11 +324,27 @@ const Carlo = {
         }
       }
 
-      // Calculate outcome
-      // The outcome formula is: scenario_monthly_profit - baseline_monthly_profit
-      const scenarioProfitValue = values['monthly_profit'] || 0;
-      const outcome = scenarioProfitValue - baselineProfitValue;
+      // Calculate outcome using the outcome formula on RAW sampled values
+      // (not edge-modified values, to avoid double-counting causal effects)
+      let outcomeValue = 0;
+      const outcomeFormula = prismaData.outcome?.formula;
+      if (outcomeFormula && validateFormula(outcomeFormula)) {
+        try {
+          const varNames = Object.keys(variableValues);
+          const varValues = Object.values(variableValues);
+          // NOTE: new Function() is intentional — validated math formula from AI
+          const evalFunc = new Function(...varNames, 'return ' + outcomeFormula);
+          outcomeValue = evalFunc(...varValues);
+          if (isNaN(outcomeValue) || !isFinite(outcomeValue)) outcomeValue = 0;
+        } catch (e) {
+          outcomeValue = 0;
+        }
+      } else {
+        outcomeValue = values['monthly_profit'] || 0;
+      }
 
+      // Delta from baseline
+      const outcome = outcomeValue - baselineProfitValue;
       outcomes.push(outcome);
     }
 

@@ -88,6 +88,10 @@ module.exports = async function handler(req, res) {
 
   // 4. Call Anthropic API
   try {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('ANTHROPIC_API_KEY is not set');
+      return res.status(500).json({ error: 'Prisma configuration error. Please contact support.', code: 'CONFIG_ERROR' });
+    }
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const response = await client.messages.create({
@@ -307,8 +311,8 @@ module.exports = async function handler(req, res) {
     });
 
   } catch (error) {
-    // NEVER leak error details — could contain API key in headers
-    console.error('Anthropic API error:', error.status || 'unknown', error.type || 'unknown_type');
+    // Log error type for debugging (never leak full error — could contain headers)
+    console.error('Anthropic API error:', error.status || 'unknown', error.type || 'unknown_type', error.message || '');
 
     // Handle specific error types
     if (error.status === 429) {

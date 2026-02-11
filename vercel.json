@@ -2,6 +2,9 @@
   "functions": {
     "api/chat.js": {
       "maxDuration": 60
+    },
+    "api/refine-recommendations.js": {
+      "maxDuration": 10
     }
   }
 }

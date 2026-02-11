@@ -1,0 +1,9 @@
+docs/
+engines/
+templates/
+data/
+*.pdf
+test-*.html
+CLAUDE.md
+README.md
+.claude/

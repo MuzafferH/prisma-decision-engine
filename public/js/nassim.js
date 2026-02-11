@@ -208,69 +208,101 @@ const Nassim = {
 
   /**
    * Run sensitivity analysis to find which variables matter most
+   * Tests ALL non-fixed variables (not just isInput) for comprehensive ranking.
+   *
+   * Two-phase execution:
+   *   Phase 1 (sync): Variables appearing in the outcome formula — fast, returns immediately
+   *   Phase 2 (async): Remaining non-fixed variables — runs via requestIdleCallback, calls onComplete
    *
    * @param {Object} prismaData - Complete PRISMA_DATA object
    * @param {string} scenarioId - Scenario to analyze
-   * @param {number} iterations - Number of Carlo iterations per variable test (default: 500 for speed)
-   * @returns {Array} Sensitivity results sorted by impact (descending): [{variableId, variableLabel, impactLow, impactHigh, totalSwing, baselineMedian}]
+   * @param {number} iterations - Number of Carlo iterations per variable test (default: 300)
+   * @param {Function} onComplete - Optional callback when Phase 2 finishes with full results
+   * @returns {Array} Phase 1 results (formula variables only), sorted by totalSwing
    */
-  runSensitivity(prismaData, scenarioId, iterations = 500) {
-    // Get baseline (normal scenario run)
+  runFullSensitivity(prismaData, scenarioId, iterations = 300, onComplete = null) {
+    // Get baseline
     const baselineOutcomes = Carlo.runCarlo(prismaData, scenarioId, iterations);
     const baselineSorted = [...baselineOutcomes].sort((a, b) => a - b);
     const baselineMedian = baselineSorted[Math.floor(baselineSorted.length * 0.5)];
 
-    const sensitivityResults = [];
+    // All non-fixed variables
+    const nonFixedVars = prismaData.variables.filter(v => v.distribution !== 'fixed');
+    if (nonFixedVars.length === 0) return [];
 
-    // Find input variables (those with isInput: true)
-    const inputVariables = prismaData.variables.filter(v => v.isInput === true);
+    // Parse outcome formula to find which variable IDs it references
+    const formulaStr = prismaData.outcome?.formula || '';
+    const formulaVarIds = new Set();
+    for (const v of prismaData.variables) {
+      if (formulaStr.includes(v.id)) formulaVarIds.add(v.id);
+    }
 
-    for (const variable of inputVariables) {
-      // Create modified data with variable held at MIN
+    // Split into Phase 1 (formula vars) and Phase 2 (rest)
+    const phase1Vars = nonFixedVars.filter(v => formulaVarIds.has(v.id));
+    const phase2Vars = nonFixedVars.filter(v => !formulaVarIds.has(v.id));
+
+    const testVariable = (variable) => {
+      // Test at MIN
       const dataAtMin = JSON.parse(JSON.stringify(prismaData));
       const varAtMin = dataAtMin.variables.find(v => v.id === variable.id);
       varAtMin.value = varAtMin.min;
-      varAtMin.min = varAtMin.min;
       varAtMin.max = varAtMin.min;
       varAtMin.distribution = 'fixed';
-
-      // Run Carlo with variable at MIN
       const outcomesAtMin = Carlo.runCarlo(dataAtMin, scenarioId, iterations);
       const sortedAtMin = [...outcomesAtMin].sort((a, b) => a - b);
       const medianAtMin = sortedAtMin[Math.floor(sortedAtMin.length * 0.5)];
 
-      // Create modified data with variable held at MAX
+      // Test at MAX
       const dataAtMax = JSON.parse(JSON.stringify(prismaData));
       const varAtMax = dataAtMax.variables.find(v => v.id === variable.id);
       varAtMax.value = varAtMax.max;
       varAtMax.min = varAtMax.max;
-      varAtMax.max = varAtMax.max;
       varAtMax.distribution = 'fixed';
-
-      // Run Carlo with variable at MAX
       const outcomesAtMax = Carlo.runCarlo(dataAtMax, scenarioId, iterations);
       const sortedAtMax = [...outcomesAtMax].sort((a, b) => a - b);
       const medianAtMax = sortedAtMax[Math.floor(sortedAtMax.length * 0.5)];
 
-      // Calculate impact
-      const impactLow = medianAtMin - baselineMedian;
-      const impactHigh = medianAtMax - baselineMedian;
-      const totalSwing = Math.abs(impactHigh - impactLow);
-
-      sensitivityResults.push({
+      return {
         variableId: variable.id,
         variableLabel: variable.label,
-        impactLow,
-        impactHigh,
-        totalSwing,
+        impactLow: medianAtMin - baselineMedian,
+        impactHigh: medianAtMax - baselineMedian,
+        totalSwing: Math.abs((medianAtMax - baselineMedian) - (medianAtMin - baselineMedian)),
         baselineMedian
-      });
+      };
+    };
+
+    // Phase 1: test formula variables synchronously
+    const phase1Results = phase1Vars.map(testVariable);
+    phase1Results.sort((a, b) => b.totalSwing - a.totalSwing);
+
+    // Phase 2: test remaining variables asynchronously
+    if (phase2Vars.length > 0 && onComplete) {
+      const runPhase2 = () => {
+        const phase2Results = phase2Vars.map(testVariable);
+        const allResults = [...phase1Results, ...phase2Results];
+        allResults.sort((a, b) => b.totalSwing - a.totalSwing);
+        onComplete(allResults);
+      };
+
+      if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(runPhase2);
+      } else {
+        setTimeout(runPhase2, 50);
+      }
+    } else if (onComplete) {
+      // No phase 2 vars, call back with phase 1 results
+      onComplete(phase1Results);
     }
 
-    // Sort by total swing (descending) — highest impact first
-    sensitivityResults.sort((a, b) => b.totalSwing - a.totalSwing);
+    return phase1Results;
+  },
 
-    return sensitivityResults;
+  /**
+   * Legacy wrapper — kept for backward compatibility with Layer 2/3
+   */
+  runSensitivity(prismaData, scenarioId, iterations = 500) {
+    return this.runFullSensitivity(prismaData, scenarioId, iterations);
   },
 
   /**
@@ -282,6 +314,124 @@ const Nassim = {
    */
   getTopVariables(sensitivityResults, n = 3) {
     return sensitivityResults.slice(0, n);
+  },
+
+  /**
+   * Compute a 0-100 decision score from a Taleb classification result
+   * Maps classification + percentPositive + confidence into a single number
+   *
+   * Score mapping:
+   *   80-100 green: "This looks strong"
+   *   60-79  green: "Solid bet with manageable downside"
+   *   40-59  amber: "This could go either way"
+   *   20-39  red:   "Proceed with caution"
+   *   0-19   red:   "This is risky"
+   *
+   * @param {Object} classification - Result from classifyTaleb()
+   * @returns {number} Score 0-100
+   */
+  computeDecisionScore(classification) {
+    if (!classification) return 50;
+
+    const pctPositive = classification.percentPositive;
+    const confidence = classification.confidence || 0.5;
+    const cls = classification.classification;
+
+    // Base score from percent positive (0-100 range)
+    let score = pctPositive;
+
+    // Adjust based on classification
+    if (cls === 'ANTIFRAGILE') {
+      score = Math.max(score, 80); // At least 80 for antifragile
+      score = Math.min(100, score + confidence * 10);
+    } else if (cls === 'ROBUST') {
+      // Boost robust decisions slightly
+      score = Math.min(100, score + confidence * 5);
+    } else if (cls === 'FRAGILE') {
+      // Penalize fragile decisions
+      score = Math.max(0, score - confidence * 10);
+    }
+
+    // Clamp to 0-100
+    return Math.round(Math.max(0, Math.min(100, score)));
+  },
+
+  /**
+   * Generate plain-English verdict from classification + simulation data
+   *
+   * @param {Object} classification - Result from classifyTaleb()
+   * @param {Object} summary - Carlo summary for best scenario
+   * @param {Object} prismaState - Full state
+   * @param {string} [bestScenarioLabel] - Optional: include scenario name in headline
+   * @returns {Object} {headline, summaryParts, riskParts, score, color}
+   */
+  generateVerdict(classification, summary, prismaState, bestScenarioLabel) {
+    if (!classification || !summary) {
+      return { headline: 'Analyzing...', summary: '', risk: '', score: 50, color: '#F59E0B' };
+    }
+
+    const score = this.computeDecisionScore(classification);
+    const unit = prismaState.outcome?.unit || '';
+    const cls = classification.classification;
+
+    // Headline from score — include scenario name when provided
+    let headline;
+    if (bestScenarioLabel) {
+      if (score >= 80) headline = `${bestScenarioLabel} looks strongest`;
+      else if (score >= 60) headline = `${bestScenarioLabel} is a solid bet`;
+      else if (score >= 40) headline = `${bestScenarioLabel} could go either way`;
+      else if (score >= 20) headline = `${bestScenarioLabel} needs caution`;
+      else headline = `${bestScenarioLabel} looks risky`;
+    } else {
+      if (score >= 80) headline = 'This looks strong';
+      else if (score >= 60) headline = 'Solid bet with manageable downside';
+      else if (score >= 40) headline = 'This could go either way';
+      else if (score >= 20) headline = 'Proceed with caution';
+      else headline = 'This is risky';
+    }
+
+    // Color from score
+    let color;
+    if (score >= 60) color = '#10B981';
+    else if (score >= 40) color = '#F59E0B';
+    else color = '#EF4444';
+
+    // Summary: structured parts so renderer can bold key values
+    // Each part is {text, bold} — bold parts get <strong>
+    const medianStr = Visualizations._formatNumber(summary.median) + ' ' + unit;
+    const pctStr = classification.percentPositive.toFixed(0) + '%';
+    const summaryParts = [
+      { text: 'Most likely outcome: ' },
+      { text: medianStr, bold: true },
+      { text: '. In ' },
+      { text: pctStr, bold: true },
+      { text: ' of 1,000 simulated futures, this decision comes out positive.' }
+    ];
+
+    // Risk: structured parts
+    let riskParts = [];
+    const p10Str = Visualizations._formatNumber(Math.abs(summary.p10)) + ' ' + unit;
+    if (cls === 'FRAGILE') {
+      riskParts = [
+        { text: 'In the worst 10% of futures, losses reach ' },
+        { text: p10Str, bold: true },
+        { text: '.' }
+      ];
+    } else if (summary.p10 < 0) {
+      riskParts = [
+        { text: 'Downside: the worst 10% of futures show losses of ' },
+        { text: p10Str, bold: true },
+        { text: '.' }
+      ];
+    } else {
+      riskParts = [
+        { text: 'Even in the worst 10%, the outcome stays at ' },
+        { text: Visualizations._formatNumber(summary.p10) + ' ' + unit, bold: true },
+        { text: '.' }
+      ];
+    }
+
+    return { headline, summaryParts, riskParts, score, color };
   }
 };
 
