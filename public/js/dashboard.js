@@ -423,9 +423,15 @@ Dashboard.renderLayer1 = function() {
   // Render verdict text
   Visualizations.renderVerdict(verdict);
 
-  // Render recommendations
+  // Render recommendations — use AI-provided text, or generate from simulation data
   if (state.recommendation) {
     Visualizations.renderRecommendations(state.recommendation);
+  } else {
+    // AI didn't include recommendations yet — generate from simulation results
+    const templateRecs = Dashboard.generateDynamicRecommendations();
+    if (templateRecs) {
+      Visualizations.renderRecommendations(templateRecs);
+    }
   }
 
   // Render front-page sliders (only on first render or after reset)
