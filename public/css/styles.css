@@ -169,9 +169,11 @@ body {
 
 /* Chat message bubbles */
 .message {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
   animation: messageSlideIn 0.3s ease;
 }
 
@@ -186,44 +188,51 @@ body {
   }
 }
 
-.message.user {
-  align-items: flex-end;
-}
-
-.message.prisma {
-  align-items: flex-start;
-}
-
-.message-bubble {
-  max-width: 85%;
-  padding: 10px 14px;
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.message.user .message-bubble {
+.message.user-message {
   background: var(--accent);
   color: var(--bg);
   border-bottom-right-radius: 4px;
+  align-self: flex-end;
+  margin-left: auto;
 }
 
-.message.prisma .message-bubble {
+.message.prisma-message {
   background: var(--bg3);
   color: var(--text);
   border: 1px solid var(--border);
   border-bottom-left-radius: 4px;
+  align-self: flex-start;
+  margin-right: auto;
 }
 
-/* Typing indicator */
+.message.system-message {
+  background: rgba(255, 167, 38, 0.1);
+  color: var(--text2);
+  border: 1px solid rgba(255, 167, 38, 0.2);
+  border-radius: 8px;
+  align-self: center;
+  max-width: 90%;
+  text-align: center;
+  font-size: 13px;
+}
+
+.message.error-message {
+  background: rgba(239, 83, 80, 0.1);
+  color: var(--fragile);
+  border: 1px solid rgba(239, 83, 80, 0.3);
+}
+
+/* Typing indicator container */
+.typing-indicator-msg {
+  align-self: flex-start;
+  margin-right: auto;
+}
+
+/* Typing indicator animation */
 .typing-indicator {
   display: inline-flex;
   gap: 4px;
-  padding: 10px 14px;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  border-bottom-left-radius: 4px;
+  padding: 4px 0;
 }
 
 .typing-indicator span {
@@ -312,6 +321,12 @@ body {
 
 .btn-send:active {
   background: var(--accent3);
+}
+
+.btn-send:disabled {
+  background: var(--text3);
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .btn-upload {
