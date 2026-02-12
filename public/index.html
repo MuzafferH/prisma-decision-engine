@@ -53,16 +53,12 @@
       position: relative;
     }
 
-    /* ====== DOT GRID BACKGROUND (from TRIAGE) ====== */
-    body::before {
-      content: '';
+    /* ====== INTERACTIVE DOT GRID (canvas, replaces body::before) ====== */
+    #dot-grid-canvas {
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 0;
-      background-image: radial-gradient(circle, rgba(245, 192, 192, 0.85) 1px, transparent 1px);
-      background-size: 20px 20px;
-      opacity: 0.8;
     }
 
     /* ====== GLOW BEHIND HERO ====== */
@@ -179,37 +175,72 @@
       animation: fadeUp 0.6s var(--ease-out) 0.60s forwards;
     }
 
-    /* ====== CTA BUTTON ====== */
+    /* ====== CTA BUTTON (dark, with canvas particles) ====== */
     .cta {
+      position: relative;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 14px 32px;
-      background: linear-gradient(135deg, #2563eb, #1d4ed8);
-      color: #fff;
-      border: none;
-      border-radius: 12px;
+      justify-content: center;
+      gap: 10px;
+      padding: 18px 40px;
+      background: #1A1520;
+      color: #F5F0F0;
+      border: 1px solid rgba(245, 192, 192, 0.18);
+      border-radius: 6px;
       font-family: var(--font-sans);
       font-size: 16px;
       font-weight: 600;
       cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      transition: transform 0.2s ease, box-shadow 0.3s ease, border-color 0.3s ease;
       text-decoration: none;
       margin-bottom: 40px;
       opacity: 0;
-      animation: fadeUp 0.6s var(--ease-out) 0.70s forwards;
+      animation: fadeUp 0.6s var(--ease-out) 0.75s forwards;
+      overflow: hidden;
     }
     .cta:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
+      box-shadow: 0 4px 16px rgba(26, 21, 32, 0.15);
+      border-color: rgba(245, 240, 240, 0.35);
     }
     .cta:active { transform: translateY(0); }
+    .cta:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 4px;
+    }
+
+    .cta-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .cta-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cta-arrow {
+      transition: transform 0.3s ease;
+      opacity: 0.85;
+    }
+    .cta:hover .cta-arrow {
+      transform: translateX(4px);
+      opacity: 1;
+    }
 
     /* Static CTA (no hero animation, used in scroll sections) */
     .cta-static {
       opacity: 1;
       animation: none;
       margin-bottom: 0;
+      padding: 22px 52px;
+      font-size: 18px;
     }
 
     /* ====== ACCENT LINE ====== */
@@ -218,7 +249,7 @@
       height: 1px;
       margin-bottom: 36px;
       opacity: 0;
-      animation: fadeUp 0.5s var(--ease-out) 0.85s forwards;
+      animation: fadeUp 0.5s var(--ease-out) 0.90s forwards;
       position: relative;
     }
     .accent-line::after {
@@ -228,7 +259,7 @@
       left: 50%;
       height: 1px;
       background: linear-gradient(90deg, var(--accent), var(--rose), #10B981);
-      animation: lineGrow 0.8s var(--ease-out) 0.85s forwards;
+      animation: lineGrow 0.8s var(--ease-out) 0.90s forwards;
       width: 0;
       transform: translateX(-50%);
     }
@@ -326,6 +357,72 @@
       font-weight: 600;
     }
 
+    /* ====== CASCADE SECTION (Data → Simulation → Decision) ====== */
+    .cascade-section {
+      position: relative;
+      z-index: 1;
+      padding: 40px 24px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .cascade-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      max-width: 720px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .cascade-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cascade-canvas {
+      display: block;
+      width: 180px;
+      height: 140px;
+      border-radius: 8px;
+      border: 1px solid rgba(245, 192, 192, 0.18);
+      background: rgba(245, 240, 240, 0.4);
+    }
+
+    .cascade-label {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text3);
+      letter-spacing: 0.02em;
+    }
+
+    .cascade-arrow {
+      font-family: var(--font-mono);
+      font-size: 20px;
+      color: var(--text3);
+      opacity: 0.4;
+      margin-bottom: 28px;
+    }
+
+    @media (max-width: 768px) {
+      .cascade-container {
+        flex-direction: column;
+        gap: 8px;
+      }
+      .cascade-canvas {
+        width: 140px;
+        height: 110px;
+      }
+      .cascade-arrow {
+        transform: rotate(90deg);
+        margin-bottom: 0;
+      }
+    }
+
     /* ====== SCROLL SECTIONS ====== */
     .proof-section {
       position: relative;
@@ -360,6 +457,7 @@
       text-align: left;
       padding-left: 16px;
       border-left: 2px solid var(--rose);
+      position: relative;
     }
 
     .stat-label {
@@ -380,6 +478,7 @@
       line-height: 1.1;
       margin-bottom: 8px;
       letter-spacing: -0.02em;
+      position: relative;
     }
 
     .stat-desc {
@@ -388,6 +487,21 @@
       font-weight: 400;
       color: var(--text3);
       line-height: 1.5;
+    }
+
+    /* Orbiting dot for stat blocks */
+    .orbit-dot {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: var(--rose);
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .orbit-dot.active {
+      opacity: 1;
     }
 
     /* ====== FINAL CTA SECTION ====== */
@@ -467,13 +581,23 @@
       to { opacity: 0; transform: scale(0.98); }
     }
 
+    /* ====== REDUCED MOTION ====== */
+    @media (prefers-reduced-motion: reduce) {
+      .reveal {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+      }
+    }
+
     /* ====== RESPONSIVE ====== */
     @media (max-width: 640px) {
       .brand { font-size: clamp(3rem, 12vw, 5rem); }
       .tagline { font-size: 17px; }
       .mini-sim { max-width: 320px; }
       .sim-label { min-width: 72px; font-size: 11px; }
-      .cta { padding: 12px 24px; font-size: 15px; }
+      .cta { padding: 14px 28px; font-size: 15px; }
+      .cta-static { padding: 18px 36px; font-size: 16px; }
 
       .stat-grid {
         flex-direction: column;
@@ -489,6 +613,9 @@
   </style>
 </head>
 <body>
+
+  <!-- Interactive dot grid canvas (MUST be first child for z-index ordering) -->
+  <canvas id="dot-grid-canvas"></canvas>
 
   <!-- Ambient glow -->
   <div class="glow"></div>
@@ -525,10 +652,15 @@
       <!-- Subtitle -->
       <p class="subtitle">Upload your data. Prisma finds what you&rsquo;re missing &mdash;<br>then simulates what happens next.</p>
 
-      <!-- CTA -->
-      <a href="app.html" class="cta cta-nav" id="cta-btn">
-        Test Your First Decision
-        <span style="transition: transform 0.2s ease; display: inline-block;">&rarr;</span>
+      <!-- CTA (dark, with particle canvas) -->
+      <a href="app.html" class="cta cta-nav" id="cta-hero">
+        <canvas class="cta-canvas" id="hero-canvas"></canvas>
+        <span class="cta-content">
+          Make Your First Decision
+          <svg class="cta-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
       </a>
 
       <!-- Accent line -->
@@ -563,6 +695,26 @@
     </div>
   </section>
 
+  <!-- ====== CASCADE: Data → Simulation → Decision ====== -->
+  <section class="cascade-section reveal">
+    <div class="cascade-container">
+      <div class="cascade-step">
+        <canvas class="cascade-canvas" id="cascade-1"></canvas>
+        <span class="cascade-label">Your data</span>
+      </div>
+      <span class="cascade-arrow">&rarr;</span>
+      <div class="cascade-step">
+        <canvas class="cascade-canvas" id="cascade-2"></canvas>
+        <span class="cascade-label">1,000 simulations</span>
+      </div>
+      <span class="cascade-arrow">&rarr;</span>
+      <div class="cascade-step">
+        <canvas class="cascade-canvas" id="cascade-3"></canvas>
+        <span class="cascade-label">Your answer</span>
+      </div>
+    </div>
+  </section>
+
   <!-- ====== SECTION 2: THE PROOF ====== -->
   <section class="proof-section">
     <h2 class="proof-headline reveal">One upload. Three insights. A thousand scenarios.</h2>
@@ -574,7 +726,7 @@
       </div>
       <div class="stat-block reveal">
         <div class="stat-label">Simulations</div>
-        <div class="stat-value">1,000 scenarios</div>
+        <div class="stat-value" data-count-target="1000"><span class="count-number">1,000</span> scenarios</div>
         <div class="stat-desc">Every path forward, tested at once</div>
       </div>
       <div class="stat-block reveal">
@@ -590,9 +742,14 @@
     <h2 class="cta-headline reveal">Every decision is a bet.</h2>
     <p class="cta-subhead reveal">See the odds first.</p>
     <p class="cta-body reveal">Free. No signup. Drop a CSV and see what happens.</p>
-    <a href="app.html" class="cta cta-static cta-nav reveal">
-      Test Your First Decision
-      <span style="transition: transform 0.2s ease; display: inline-block;">&rarr;</span>
+    <a href="app.html" class="cta cta-static cta-nav reveal" id="cta-footer">
+      <canvas class="cta-canvas" id="footer-canvas"></canvas>
+      <span class="cta-content">
+        Make Your First Decision
+        <svg class="cta-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
     </a>
     <div class="credits reveal">
       Muzaffer Hizel &middot; 2026
@@ -600,8 +757,14 @@
     </div>
   </section>
 
+  <!-- Button particle system -->
+  <script src="/js/button-particles.js"></script>
+
   <script>
-    // Scroll reveal via IntersectionObserver
+    // ====== GLOBAL ANIMATION REGISTRY (for cleanup on page exit) ======
+    window.__prismaAnimations = [];
+
+    // ====== SCROLL REVEAL ======
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -611,23 +774,530 @@
       });
     }, { threshold: 0.15 });
 
-    document.querySelectorAll('.reveal').forEach((el, i) => {
-      // Stagger siblings within same parent
+    document.querySelectorAll('.reveal').forEach((el) => {
       const siblings = Array.from(el.parentElement.querySelectorAll('.reveal'));
       const idx = siblings.indexOf(el);
       el.style.transitionDelay = (idx * 0.08) + 's';
       observer.observe(el);
     });
 
-    // CTA: fade out then navigate (both hero and footer CTA)
+    // ====== CTA: FADE OUT + CLEANUP ======
     document.querySelectorAll('.cta-nav').forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.preventDefault();
         const href = this.getAttribute('href');
+        // Cancel all canvas animations
+        window.__prismaAnimations.forEach(id => cancelAnimationFrame(id));
+        window.__prismaAnimations = [];
+        // Stop button particle instances
+        if (window.__prismaParticles) {
+          window.__prismaParticles.forEach(p => p.stop());
+        }
         document.body.classList.add('fade-out');
         setTimeout(() => { window.location.href = href; }, 400);
       });
     });
+
+    // ====== INTERACTIVE DOT GRID ======
+    (function() {
+      const canvas = document.getElementById('dot-grid-canvas');
+      if (!canvas) return;
+
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const ctx = canvas.getContext('2d');
+      const spacing = 20;
+      let w, h, cols, rows;
+      let mouseX = -1000, mouseY = -1000;
+      let frameCount = 0;
+      let dirtyDots = new Set();
+
+      // Per-dot state (only used for dots that become interactive)
+      let dotMap = {};
+
+      function getDot(idx) {
+        if (!dotMap[idx]) {
+          dotMap[idx] = { s: 1, r: 245, g: 192, b: 192, a: 0.85 };
+        }
+        return dotMap[idx];
+      }
+
+      function resize() {
+        const dpr = window.devicePixelRatio || 1;
+        w = window.innerWidth;
+        h = window.innerHeight;
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        cols = Math.ceil(w / spacing) + 1;
+        rows = Math.ceil(h / spacing) + 1;
+
+        if (prefersReducedMotion) drawStatic();
+      }
+
+      function drawStatic() {
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = 'rgba(245, 192, 192, 0.85)';
+        for (let i = 0; i < cols; i++) {
+          for (let j = 0; j < rows; j++) {
+            ctx.beginPath();
+            ctx.arc(i * spacing, j * spacing, 1, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      function render() {
+        frameCount++;
+        // Throttle to ~30fps
+        if (frameCount % 2 !== 0) {
+          const id = requestAnimationFrame(render);
+          window.__prismaAnimations[0] = id;
+          return;
+        }
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Compute interactive bounding box
+        const radius = 120;
+        const iMinCol = Math.max(0, Math.floor((mouseX - radius) / spacing) - 1);
+        const iMaxCol = Math.min(cols - 1, Math.ceil((mouseX + radius) / spacing) + 1);
+        const iMinRow = Math.max(0, Math.floor((mouseY - radius) / spacing) - 1);
+        const iMaxRow = Math.min(rows - 1, Math.ceil((mouseY + radius) / spacing) + 1);
+
+        // Draw all default dots (batch single fillStyle)
+        ctx.fillStyle = 'rgba(245, 192, 192, 0.85)';
+        for (let i = 0; i < cols; i++) {
+          for (let j = 0; j < rows; j++) {
+            const idx = i * rows + j;
+            // Skip if in interactive zone or dirty
+            if (i >= iMinCol && i <= iMaxCol && j >= iMinRow && j <= iMaxRow) continue;
+            if (dirtyDots.has(idx)) continue;
+            ctx.beginPath();
+            ctx.arc(i * spacing, j * spacing, 1, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        // Process interactive zone dots
+        for (let i = iMinCol; i <= iMaxCol; i++) {
+          for (let j = iMinRow; j <= iMaxRow; j++) {
+            if (i < 0 || j < 0 || i >= cols || j >= rows) continue;
+            const x = i * spacing;
+            const y = j * spacing;
+            const dx = mouseX - x;
+            const dy = mouseY - y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const idx = i * rows + j;
+            const dot = getDot(idx);
+
+            if (dist < radius) {
+              dirtyDots.add(idx);
+              const factor = Math.pow(1 - dist / radius, 2);
+              const ts = 1 + factor * 1.5;
+              let tr, tg, tb, ta;
+              if (dist < 40) {
+                tr = 195; tg = 142; tb = 143; ta = 0.9;
+              } else {
+                tr = 245; tg = 192; tb = 192; ta = 1.0;
+              }
+              dot.s += (ts - dot.s) * 0.08;
+              dot.r += (tr - dot.r) * 0.08;
+              dot.g += (tg - dot.g) * 0.08;
+              dot.b += (tb - dot.b) * 0.08;
+              dot.a += (ta - dot.a) * 0.08;
+            } else {
+              dot.s += (1 - dot.s) * 0.04;
+              dot.r += (245 - dot.r) * 0.04;
+              dot.g += (192 - dot.g) * 0.04;
+              dot.b += (192 - dot.b) * 0.04;
+              dot.a += (0.85 - dot.a) * 0.04;
+              if (Math.abs(dot.s - 1) < 0.02) {
+                dot.s = 1; dot.r = 245; dot.g = 192; dot.b = 192; dot.a = 0.85;
+                dirtyDots.delete(idx);
+                ctx.fillStyle = 'rgba(245, 192, 192, 0.85)';
+                ctx.beginPath();
+                ctx.arc(x, y, 1, 0, Math.PI * 2);
+                ctx.fill();
+                continue;
+              }
+            }
+
+            ctx.beginPath();
+            ctx.arc(x, y, dot.s, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(' + (dot.r | 0) + ',' + (dot.g | 0) + ',' + (dot.b | 0) + ',' + dot.a.toFixed(2) + ')';
+            ctx.fill();
+          }
+        }
+
+        // Process dirty dots outside interactive zone (returning to default)
+        dirtyDots.forEach(idx => {
+          const i = Math.floor(idx / rows);
+          const j = idx % rows;
+          if (i >= iMinCol && i <= iMaxCol && j >= iMinRow && j <= iMaxRow) return;
+          const dot = getDot(idx);
+          dot.s += (1 - dot.s) * 0.04;
+          dot.r += (245 - dot.r) * 0.04;
+          dot.g += (192 - dot.g) * 0.04;
+          dot.b += (192 - dot.b) * 0.04;
+          dot.a += (0.85 - dot.a) * 0.04;
+
+          if (Math.abs(dot.s - 1) < 0.02) {
+            dot.s = 1; dot.r = 245; dot.g = 192; dot.b = 192; dot.a = 0.85;
+            dirtyDots.delete(idx);
+            delete dotMap[idx];
+            ctx.fillStyle = 'rgba(245, 192, 192, 0.85)';
+            ctx.beginPath();
+            ctx.arc(i * spacing, j * spacing, 1, 0, Math.PI * 2);
+            ctx.fill();
+            return;
+          }
+
+          ctx.beginPath();
+          ctx.arc(i * spacing, j * spacing, dot.s, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(' + (dot.r | 0) + ',' + (dot.g | 0) + ',' + (dot.b | 0) + ',' + dot.a.toFixed(2) + ')';
+          ctx.fill();
+        });
+
+        const id = requestAnimationFrame(render);
+        window.__prismaAnimations[0] = id;
+      }
+
+      window.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+      }, { passive: true });
+
+      document.addEventListener('mouseleave', () => {
+        mouseX = -1000;
+        mouseY = -1000;
+      });
+
+      window.addEventListener('resize', resize);
+      resize();
+
+      if (!prefersReducedMotion) {
+        const id = requestAnimationFrame(render);
+        window.__prismaAnimations[0] = id;
+      }
+    })();
+
+    // ====== CASCADE ANIMATION (3 canvases, looping) ======
+    (function() {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const section = document.querySelector('.cascade-section');
+      const canvases = [
+        document.getElementById('cascade-1'),
+        document.getElementById('cascade-2'),
+        document.getElementById('cascade-3')
+      ];
+      if (!canvases[0]) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const ctxs = canvases.map(c => {
+        const ctx = c.getContext('2d');
+        c.width = 180 * dpr;
+        c.height = 140 * dpr;
+        ctx.scale(dpr, dpr);
+        return ctx;
+      });
+      const cw = 180, ch = 140;
+      const dotCount = 45;
+      const roseColor = [245, 192, 192];
+      const greenColor = [16, 185, 129];
+
+      // Gaussian for bell curve
+      function gaussian(x, mean, std) {
+        return Math.exp(-Math.pow(x - mean, 2) / (2 * std * std));
+      }
+
+      // Generate dot sets
+      const dots = [];
+      for (let i = 0; i < dotCount; i++) {
+        const t = i / (dotCount - 1);
+        // Random scatter positions
+        const scatterX = Math.random() * (cw - 20) + 10;
+        const scatterY = Math.random() * (ch - 20) + 10;
+        // Histogram positions (columns)
+        const numCols = 8;
+        const col = Math.floor(Math.random() * numCols);
+        const colX = 15 + col * ((cw - 30) / (numCols - 1));
+        const colHeight = gaussian(col, numCols / 2, numCols / 4) * (ch * 0.7);
+        const colY = ch - 15 - Math.random() * colHeight;
+        // Bell curve positions
+        const bellX = 10 + t * (cw - 20);
+        const bellHeight = gaussian(bellX, cw / 2, cw / 5) * (ch * 0.75);
+        const bellY = ch - 15 - bellHeight + (Math.random() - 0.5) * 6;
+        // Is this a peak dot? (near center of bell curve)
+        const isPeak = Math.abs(bellX - cw / 2) < 20 && i % 8 === 0;
+
+        dots.push({
+          scatter: { x: scatterX, y: scatterY },
+          histo: { x: colX, y: colY },
+          bell: { x: bellX, y: bellY },
+          isPeak: isPeak,
+          x: scatterX, y: scatterY,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: (Math.random() - 0.5) * 0.5
+        });
+      }
+
+      // Phases: scatter(2s) → organize(1.5s) → converge(1.5s) → hold(3s) → reset(0.5s)
+      const phaseDurations = [2000, 1500, 1500, 3000, 500];
+      const totalCycle = phaseDurations.reduce((a, b) => a + b, 0);
+      let startTime = 0;
+      let isVisible = false;
+      let animId = null;
+
+      function easeInOut(t) {
+        return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      }
+
+      function lerp(a, b, t) { return a + (b - a) * t; }
+
+      function getPhase(elapsed) {
+        let t = elapsed % totalCycle;
+        let acc = 0;
+        for (let i = 0; i < phaseDurations.length; i++) {
+          if (t < acc + phaseDurations[i]) {
+            return { phase: i, progress: (t - acc) / phaseDurations[i] };
+          }
+          acc += phaseDurations[i];
+        }
+        return { phase: 0, progress: 0 };
+      }
+
+      function drawDots(ctx, phase, progress) {
+        ctx.clearRect(0, 0, cw, ch);
+
+        dots.forEach(d => {
+          let tx, ty;
+          let isGreen = false;
+
+          if (phase === 0) {
+            // Scatter: drift around scatter positions
+            tx = d.scatter.x + Math.sin(Date.now() * 0.001 + d.scatter.x) * 3;
+            ty = d.scatter.y + Math.cos(Date.now() * 0.0012 + d.scatter.y) * 3;
+          } else if (phase === 1) {
+            // Transition: scatter → histogram
+            const e = easeInOut(progress);
+            tx = lerp(d.scatter.x, d.histo.x, e);
+            ty = lerp(d.scatter.y, d.histo.y, e);
+          } else if (phase === 2) {
+            // Transition: histogram → bell curve
+            const e = easeInOut(progress);
+            tx = lerp(d.histo.x, d.bell.x, e);
+            ty = lerp(d.histo.y, d.bell.y, e);
+            if (d.isPeak && progress > 0.7) isGreen = true;
+          } else if (phase === 3) {
+            // Hold: bell curve
+            tx = d.bell.x + Math.sin(Date.now() * 0.0005 + d.bell.x) * 0.5;
+            ty = d.bell.y + Math.cos(Date.now() * 0.0006 + d.bell.y) * 0.5;
+            if (d.isPeak) isGreen = true;
+          } else {
+            // Reset: bell → scatter
+            const e = easeInOut(progress);
+            tx = lerp(d.bell.x, d.scatter.x, e);
+            ty = lerp(d.bell.y, d.scatter.y, e);
+          }
+
+          ctx.beginPath();
+          ctx.arc(tx, ty, isGreen ? 3 : 2, 0, Math.PI * 2);
+          if (isGreen) {
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.8)';
+          } else {
+            ctx.fillStyle = 'rgba(245, 192, 192, 0.7)';
+          }
+          ctx.fill();
+        });
+
+        // Draw checkmark in canvas 3 during hold phase
+        if (phase === 3) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(16, 185, 129, 0.7)';
+          ctx.lineWidth = 2;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(cw / 2 - 6, 18);
+          ctx.lineTo(cw / 2 - 1, 23);
+          ctx.lineTo(cw / 2 + 8, 12);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      function animate() {
+        if (!isVisible) return;
+        const elapsed = Date.now() - startTime;
+        const { phase, progress } = getPhase(elapsed);
+
+        // Canvas 1: always scatter
+        drawDots(ctxs[0], 0, 0);
+        // Canvas 2: scatter → histogram → hold → reset
+        if (phase <= 0) {
+          drawDots(ctxs[1], 0, 0);
+        } else if (phase === 1) {
+          drawDots(ctxs[1], 1, progress);
+        } else if (phase === 4) {
+          // Reset: histogram → scatter
+          ctxs[1].clearRect(0, 0, cw, ch);
+          const e4 = easeInOut(progress);
+          dots.forEach(d => {
+            ctxs[1].beginPath();
+            ctxs[1].arc(lerp(d.histo.x, d.scatter.x, e4), lerp(d.histo.y, d.scatter.y, e4), 2, 0, Math.PI * 2);
+            ctxs[1].fillStyle = 'rgba(245, 192, 192, 0.7)';
+            ctxs[1].fill();
+          });
+        } else {
+          // Hold histogram with gentle jitter
+          ctxs[1].clearRect(0, 0, cw, ch);
+          dots.forEach(d => {
+            ctxs[1].beginPath();
+            const jx = d.histo.x + Math.sin(Date.now() * 0.0008 + d.histo.x) * 1;
+            const jy = d.histo.y + Math.cos(Date.now() * 0.001 + d.histo.y) * 1;
+            ctxs[1].arc(jx, jy, 2, 0, Math.PI * 2);
+            ctxs[1].fillStyle = 'rgba(245, 192, 192, 0.7)';
+            ctxs[1].fill();
+          });
+        }
+        // Canvas 3: scatter → bell curve (direct, no histogram step)
+        if (phase <= 1) {
+          drawDots(ctxs[2], 0, 0);
+        } else if (phase === 2) {
+          // Custom: scatter → bell directly
+          ctxs[2].clearRect(0, 0, cw, ch);
+          const e2 = easeInOut(progress);
+          dots.forEach(d => {
+            const tx = lerp(d.scatter.x, d.bell.x, e2);
+            const ty = lerp(d.scatter.y, d.bell.y, e2);
+            const isGreen = d.isPeak && progress > 0.7;
+            ctxs[2].beginPath();
+            ctxs[2].arc(tx, ty, isGreen ? 3 : 2, 0, Math.PI * 2);
+            ctxs[2].fillStyle = isGreen ? 'rgba(16, 185, 129, 0.8)' : 'rgba(245, 192, 192, 0.7)';
+            ctxs[2].fill();
+          });
+        } else if (phase === 3) {
+          drawDots(ctxs[2], 3, progress);
+        } else {
+          drawDots(ctxs[2], 4, progress);
+        }
+
+        animId = requestAnimationFrame(animate);
+        window.__prismaAnimations[1] = animId;
+      }
+
+      // Reduced motion: show final state
+      if (prefersReducedMotion) {
+        // Canvas 1: scatter
+        drawDots(ctxs[0], 0, 0);
+        // Canvas 2: histogram
+        ctxs[1].clearRect(0, 0, cw, ch);
+        dots.forEach(d => {
+          ctxs[1].beginPath();
+          ctxs[1].arc(d.histo.x, d.histo.y, 2, 0, Math.PI * 2);
+          ctxs[1].fillStyle = 'rgba(245, 192, 192, 0.7)';
+          ctxs[1].fill();
+        });
+        // Canvas 3: bell curve
+        drawDots(ctxs[2], 3, 0);
+        return;
+      }
+
+      // IntersectionObserver: pause/resume cascade
+      const cascadeObs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting && !isVisible) {
+            isVisible = true;
+            startTime = Date.now();
+            animate();
+          } else if (!e.isIntersecting) {
+            isVisible = false;
+            if (animId) cancelAnimationFrame(animId);
+          }
+        });
+      }, { threshold: 0 });
+      cascadeObs.observe(section);
+    })();
+
+    // ====== PROOF SECTION: COUNT-UP + ORBITING DOT ======
+    (function() {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReducedMotion) return;
+
+      const statBlocks = document.querySelectorAll('.stat-block');
+      let played = false;
+
+      function easeOutExpo(t) {
+        return t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
+      }
+
+      function animateBlock(block, delay) {
+        const valueEl = block.querySelector('.stat-value');
+        const target = valueEl.getAttribute('data-count-target');
+        const isNumeric = target !== null;
+        const targetNum = isNumeric ? parseInt(target, 10) : 0;
+        const numberSpan = valueEl.querySelector('.count-number');
+
+        // Create orbiting dot
+        const dot = document.createElement('div');
+        dot.className = 'orbit-dot';
+        valueEl.appendChild(dot);
+
+        setTimeout(() => {
+          dot.classList.add('active');
+          const duration = 1200;
+          const orbitRadius = 20;
+          const start = Date.now();
+          const revolutions = 2.5;
+
+          function tick() {
+            const elapsed = Date.now() - start;
+            const t = Math.min(elapsed / duration, 1);
+            const eased = easeOutExpo(t);
+
+            // Update counter if numeric
+            if (isNumeric && numberSpan) {
+              const val = Math.round(eased * targetNum);
+              numberSpan.textContent = val.toLocaleString();
+            }
+
+            // Orbit
+            const angle = t * revolutions * Math.PI * 2;
+            const ox = Math.cos(angle) * orbitRadius * (1 - t * 0.3);
+            const oy = Math.sin(angle) * orbitRadius * (1 - t * 0.3);
+            dot.style.left = (ox + 10) + 'px';
+            dot.style.top = (oy - 8) + 'px';
+
+            if (t < 1) {
+              requestAnimationFrame(tick);
+            } else {
+              // Snap and fade
+              if (isNumeric && numberSpan) {
+                numberSpan.textContent = targetNum.toLocaleString();
+              }
+              dot.style.transition = 'opacity 0.3s ease';
+              dot.style.opacity = '0';
+              setTimeout(() => dot.remove(), 300);
+            }
+          }
+          requestAnimationFrame(tick);
+        }, delay);
+      }
+
+      const proofObs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting && !played) {
+            played = true;
+            statBlocks.forEach((block, i) => animateBlock(block, i * 200));
+            proofObs.disconnect();
+          }
+        });
+      }, { threshold: 0.5 });
+
+      document.querySelectorAll('.stat-block').forEach(b => proofObs.observe(b));
+    })();
   </script>
 
 </body>
