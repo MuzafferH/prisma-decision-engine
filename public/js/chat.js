@@ -188,7 +188,7 @@ Chat.sendMessage = async function() {
         this.messages.push({
           role: 'assistant',
           content: [
-            { type: 'text', text: response.message || '' },
+            ...(response.message ? [{ type: 'text', text: response.message }] : []),
             {
               type: 'tool_use',
               id: response.toolCall.id || 'tool_1',
@@ -299,7 +299,7 @@ Chat.sendFollowUp = async function() {
         this.messages.push({
           role: 'assistant',
           content: [
-            { type: 'text', text: response.message || '' },
+            ...(response.message ? [{ type: 'text', text: response.message }] : []),
             {
               type: 'tool_use',
               id: response.toolCall.id || 'tool_2',
@@ -624,7 +624,7 @@ Analyze this data. Generate chart specs, KPI cards, and insights with simulation
         this.messages.push({
           role: 'assistant',
           content: [
-            { type: 'text', text: response.message || '' },
+            ...(response.message ? [{ type: 'text', text: response.message }] : []),
             {
               type: 'tool_use',
               id: response.toolCall.id || 'tool_1',
