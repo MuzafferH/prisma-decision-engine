@@ -388,23 +388,24 @@
       width: 180px;
       height: 140px;
       border-radius: 8px;
-      border: 1px solid rgba(245, 192, 192, 0.18);
-      background: rgba(245, 240, 240, 0.4);
+      border: 1px solid rgba(227, 178, 179, 0.35);
+      background: rgba(255, 255, 255, 0.55);
+      box-shadow: 0 2px 12px rgba(227, 178, 179, 0.08);
     }
 
     .cascade-label {
       font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text3);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text2);
       letter-spacing: 0.02em;
     }
 
     .cascade-arrow {
       font-family: var(--font-mono);
-      font-size: 20px;
-      color: var(--text3);
-      opacity: 0.4;
+      font-size: 22px;
+      color: var(--text2);
+      opacity: 0.5;
       margin-bottom: 28px;
     }
 
@@ -895,12 +896,12 @@
             if (dist < radius) {
               dirtyDots.add(idx);
               const factor = Math.pow(1 - dist / radius, 2);
-              const ts = 1 + factor * 1.5;
+              const ts = 1 + factor * 2.2;
               let tr, tg, tb, ta;
-              if (dist < 40) {
-                tr = 195; tg = 142; tb = 143; ta = 0.9;
+              if (dist < 45) {
+                tr = 180; tg = 120; tb = 125; ta = 1.0;
               } else {
-                tr = 245; tg = 192; tb = 192; ta = 1.0;
+                tr = 220; tg = 165; tb = 170; ta = 1.0;
               }
               dot.s += (ts - dot.s) * 0.08;
               dot.r += (tr - dot.r) * 0.08;
@@ -1103,11 +1104,11 @@
           }
 
           ctx.beginPath();
-          ctx.arc(tx, ty, isGreen ? 3 : 2, 0, Math.PI * 2);
+          ctx.arc(tx, ty, isGreen ? 3.5 : 2.5, 0, Math.PI * 2);
           if (isGreen) {
             ctx.fillStyle = 'rgba(16, 185, 129, 0.8)';
           } else {
-            ctx.fillStyle = 'rgba(245, 192, 192, 0.7)';
+            ctx.fillStyle = 'rgba(210, 145, 150, 0.9)';
           }
           ctx.fill();
         });
@@ -1146,7 +1147,7 @@
           const e4 = easeInOut(progress);
           dots.forEach(d => {
             ctxs[1].beginPath();
-            ctxs[1].arc(lerp(d.histo.x, d.scatter.x, e4), lerp(d.histo.y, d.scatter.y, e4), 2, 0, Math.PI * 2);
+            ctxs[1].arc(lerp(d.histo.x, d.scatter.x, e4), lerp(d.histo.y, d.scatter.y, e4), 2.5, 0, Math.PI * 2);
             ctxs[1].fillStyle = 'rgba(245, 192, 192, 0.7)';
             ctxs[1].fill();
           });
@@ -1157,7 +1158,7 @@
             ctxs[1].beginPath();
             const jx = d.histo.x + Math.sin(Date.now() * 0.0008 + d.histo.x) * 1;
             const jy = d.histo.y + Math.cos(Date.now() * 0.001 + d.histo.y) * 1;
-            ctxs[1].arc(jx, jy, 2, 0, Math.PI * 2);
+            ctxs[1].arc(jx, jy, 2.5, 0, Math.PI * 2);
             ctxs[1].fillStyle = 'rgba(245, 192, 192, 0.7)';
             ctxs[1].fill();
           });
@@ -1174,8 +1175,8 @@
             const ty = lerp(d.scatter.y, d.bell.y, e2);
             const isGreen = d.isPeak && progress > 0.7;
             ctxs[2].beginPath();
-            ctxs[2].arc(tx, ty, isGreen ? 3 : 2, 0, Math.PI * 2);
-            ctxs[2].fillStyle = isGreen ? 'rgba(16, 185, 129, 0.8)' : 'rgba(245, 192, 192, 0.7)';
+            ctxs[2].arc(tx, ty, isGreen ? 3.5 : 2.5, 0, Math.PI * 2);
+            ctxs[2].fillStyle = isGreen ? 'rgba(16, 185, 129, 0.95)' : 'rgba(210, 145, 150, 0.9)';
             ctxs[2].fill();
           });
         } else if (phase === 3) {
@@ -1196,7 +1197,7 @@
         ctxs[1].clearRect(0, 0, cw, ch);
         dots.forEach(d => {
           ctxs[1].beginPath();
-          ctxs[1].arc(d.histo.x, d.histo.y, 2, 0, Math.PI * 2);
+          ctxs[1].arc(d.histo.x, d.histo.y, 2.5, 0, Math.PI * 2);
           ctxs[1].fillStyle = 'rgba(245, 192, 192, 0.7)';
           ctxs[1].fill();
         });
