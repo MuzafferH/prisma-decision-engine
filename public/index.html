@@ -3,176 +3,426 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PRISMA — Upload data. See 1,000 futures.</title>
-  <link rel="stylesheet" href="/css/styles.css">
-  <!-- Fonts -->
+  <title>PRISMA — 1,000 futures. One decision.</title>
+  <meta name="description" content="Upload data, run 1,000 Monte Carlo simulations, and see what to do before you commit.">
+
+  <!-- Preload pixel font -->
+  <link rel="preload" href="/fonts/GeistPixel-Triangle.woff2" as="font" type="font/woff2" crossorigin>
+
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet">
-  <!-- External libs -->
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <style>
+    /* ====== FONT ====== */
+    @font-face {
+      font-family: 'Geist Pixel Triangle';
+      src: url('/fonts/GeistPixel-Triangle.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    /* ====== VARIABLES ====== */
+    :root {
+      --bg: #F5F0F0;
+      --text: #14141C;
+      --text2: #43394c;
+      --text3: #786065;
+      --accent: #2563eb;
+      --accent-dark: #1d4ed8;
+      --rose: #E3B2B3;
+      --font-pixel: 'Geist Pixel Triangle', monospace;
+      --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Geist Mono', 'SF Mono', monospace;
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* ====== RESET ====== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* ====== NOISE TEXTURE ====== */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+      background-image:
+        radial-gradient(circle at 20% 50%, rgba(200, 180, 170, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 50%, rgba(180, 170, 190, 0.1) 0%, transparent 50%);
+    }
+
+    /* ====== GLOW BEHIND HERO ====== */
+    .glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .glow::before {
+      content: '';
+      position: absolute;
+      top: 15%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 500px;
+      background:
+        radial-gradient(ellipse at center, rgba(37, 99, 235, 0.06) 0%, transparent 70%),
+        radial-gradient(ellipse at 60% 40%, rgba(16, 185, 129, 0.04) 0%, transparent 60%);
+      filter: blur(40px);
+    }
+
+    /* ====== TOP BAR ====== */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      text-align: center;
+      padding: 12px 24px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text3);
+      letter-spacing: 0.02em;
+      opacity: 0;
+      animation: fadeUp 0.6s var(--ease-out) 0s forwards;
+    }
+    .top-bar .highlight {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ====== HERO CONTAINER ====== */
+    .hero {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 0;
+      max-width: 640px;
+      padding: 0 24px;
+    }
+
+    /* ====== PRISM ICON ====== */
+    .prism-icon {
+      margin-bottom: 24px;
+      opacity: 0;
+      animation: fadeUp 0.6s var(--ease-out) 0.15s forwards;
+    }
+    .prism-icon svg {
+      filter: drop-shadow(0 0 12px rgba(37, 99, 235, 0.15));
+      animation: prismPulse 4s ease-in-out infinite;
+    }
+    @keyframes prismPulse {
+      0%, 100% { filter: drop-shadow(0 0 12px rgba(37, 99, 235, 0.15)); }
+      50%      { filter: drop-shadow(0 0 24px rgba(37, 99, 235, 0.25)); }
+    }
+
+    /* ====== BRAND NAME ====== */
+    .brand {
+      font-family: var(--font-pixel);
+      font-size: clamp(4rem, 8vw, 7rem);
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 12px;
+      opacity: 0;
+      animation: fadeUp 0.6s var(--ease-out) 0.30s forwards;
+    }
+
+    /* ====== TAGLINE ====== */
+    .tagline {
+      font-family: var(--font-sans);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text2);
+      margin-bottom: 32px;
+      opacity: 0;
+      animation: fadeUp 0.6s var(--ease-out) 0.50s forwards;
+    }
+
+    /* ====== CTA BUTTON ====== */
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 32px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-family: var(--font-sans);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      text-decoration: none;
+      margin-bottom: 40px;
+      opacity: 0;
+      animation: fadeUp 0.6s var(--ease-out) 0.70s forwards;
+    }
+    .cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
+    }
+    .cta:active { transform: translateY(0); }
+
+    /* ====== ACCENT LINE ====== */
+    .accent-line {
+      width: 200px;
+      height: 1px;
+      margin-bottom: 36px;
+      opacity: 0;
+      animation: fadeUp 0.5s var(--ease-out) 0.85s forwards;
+      position: relative;
+    }
+    .accent-line::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      height: 1px;
+      background: linear-gradient(90deg, var(--accent), var(--rose), #10B981);
+      animation: lineGrow 0.8s var(--ease-out) 0.85s forwards;
+      width: 0;
+      transform: translateX(-50%);
+    }
+    @keyframes lineGrow {
+      to { width: 100%; }
+    }
+
+    /* ====== MINI SIM PREVIEW ====== */
+    .mini-sim {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 32px;
+      opacity: 0;
+      animation: fadeUp 0.6s var(--ease-out) 1.2s forwards;
+    }
+    .sim-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .sim-label {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text2);
+      min-width: 90px;
+      text-align: right;
+    }
+    .sim-bar-track {
+      flex: 1;
+      height: 22px;
+      background: rgba(0, 0, 0, 0.04);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    .sim-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      width: 0;
+    }
+    .sim-row:nth-child(1) .sim-bar-fill {
+      background: linear-gradient(90deg, #2563eb, #3b82f6);
+      animation: barGrow1 0.8s var(--ease-out) 1.4s forwards;
+    }
+    .sim-row:nth-child(2) .sim-bar-fill {
+      background: linear-gradient(90deg, #7C3AED, #8B5CF6);
+      animation: barGrow2 0.8s var(--ease-out) 1.5s forwards;
+    }
+    .sim-row:nth-child(3) .sim-bar-fill {
+      background: linear-gradient(90deg, #EF4444, #F87171);
+      animation: barGrow3 0.8s var(--ease-out) 1.6s forwards;
+    }
+    @keyframes barGrow1 { to { width: 78%; } }
+    @keyframes barGrow2 { to { width: 42%; } }
+    @keyframes barGrow3 { to { width: 62%; } }
+
+    .sim-value {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      min-width: 60px;
+      text-align: left;
+      opacity: 0;
+    }
+    .sim-row:nth-child(1) .sim-value {
+      color: #10B981;
+      animation: fadeIn 0.4s ease 1.8s forwards;
+    }
+    .sim-row:nth-child(2) .sim-value {
+      color: #10B981;
+      animation: fadeIn 0.4s ease 1.9s forwards;
+    }
+    .sim-row:nth-child(3) .sim-value {
+      color: #EF4444;
+      animation: fadeIn 0.4s ease 2.0s forwards;
+    }
+
+    /* ====== DESCRIPTION ====== */
+    .description {
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text3);
+      max-width: 380px;
+      margin-bottom: 24px;
+      opacity: 0;
+      animation: fadeUp 0.6s var(--ease-out) 1.5s forwards;
+    }
+    .description strong {
+      color: var(--text2);
+      font-weight: 600;
+    }
+
+    /* ====== CREDITS ====== */
+    .credits {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text3);
+      letter-spacing: 0.04em;
+      opacity: 0;
+      animation: fadeUp 0.6s var(--ease-out) 1.5s forwards;
+    }
+
+    /* ====== ANIMATIONS ====== */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    /* ====== FADE-OUT TRANSITION ====== */
+    body.fade-out {
+      animation: pageFadeOut 0.4s ease forwards;
+    }
+    @keyframes pageFadeOut {
+      to { opacity: 0; transform: scale(0.98); }
+    }
+
+    /* ====== RESPONSIVE ====== */
+    @media (max-width: 640px) {
+      .brand { font-size: clamp(3rem, 12vw, 5rem); }
+      .tagline { font-size: 17px; }
+      .mini-sim { max-width: 320px; }
+      .sim-label { min-width: 72px; font-size: 11px; }
+      .cta { padding: 12px 24px; font-size: 15px; }
+    }
+  </style>
 </head>
 <body>
-  <div class="prisma-app pre-upload">
-    <!-- HEADER -->
-    <header class="prisma-header">
-      <div class="header-left">
-        <span class="logo">PRISMA</span>
-        <span class="tagline">Upload data. See 1,000 futures.</span>
-      </div>
-      <div class="header-right">
-        <span class="tier-badge" id="tier-badge">Data Intelligence</span>
-      </div>
-    </header>
 
-    <!-- MAIN: Chat (35%) + Answer Panel (65%) -->
-    <main class="prisma-main">
-      <!-- CHAT PANEL -->
-      <aside class="chat-panel">
-        <div class="chat-messages" id="chat-messages"></div>
-        <div class="chat-input-area">
-          <textarea id="chat-input" placeholder="Ask a what-if question..." rows="2"></textarea>
-          <div class="chat-actions">
-            <button class="btn-send" id="send-btn">Send</button>
-            <label class="btn-upload" for="file-upload">
-              <span>📎</span>
-            </label>
-            <input type="file" id="file-upload" accept=".csv" hidden>
-          </div>
-        </div>
-        <div class="privacy-notice">
-          Processed by Anthropic API. Not stored. Don't share passwords or credentials.
-        </div>
-      </aside>
+  <!-- Ambient glow -->
+  <div class="glow"></div>
 
-      <!-- ANSWER PANEL -->
-      <div class="answer-panel" id="answer-panel">
-
-        <!-- UPLOAD LANDING (shown before CSV upload) -->
-        <div class="upload-landing" id="panel-dormant">
-          <div class="upload-drop-zone" id="upload-drop-zone">
-            <div class="upload-icon">
-              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="8" y="8" width="32" height="32" rx="4" stroke="#D5D5D0" stroke-width="1.5" fill="none"/>
-                <line x1="8" y1="16" x2="40" y2="16" stroke="#D5D5D0" stroke-width="1"/>
-                <line x1="8" y1="24" x2="40" y2="24" stroke="#E5E5E0" stroke-width="1"/>
-                <line x1="8" y1="32" x2="40" y2="32" stroke="#E5E5E0" stroke-width="1"/>
-                <line x1="20" y1="8" x2="20" y2="40" stroke="#E5E5E0" stroke-width="1"/>
-                <line x1="32" y1="8" x2="32" y2="40" stroke="#E5E5E0" stroke-width="1"/>
-                <path d="M24 4 L28 12 L20 12 Z" fill="#2563EB" opacity="0.6"/>
-              </svg>
-            </div>
-            <h2>Drop a CSV to see 1,000 futures</h2>
-            <p>or click to browse</p>
-            <input type="file" id="landing-file-upload" accept=".csv" hidden>
-            <span class="upload-hint">.csv files up to 10MB</span>
-          </div>
-        </div>
-
-        <!-- DATA OVERVIEW (shown after CSV upload) -->
-        <div id="data-overview" style="display:none;">
-          <div class="data-summary-card" id="data-summary-card"></div>
-          <div class="kpi-strip" id="kpi-strip"></div>
-          <div class="chart-grid" id="chart-grid"></div>
-          <div class="insights-section" id="insights-section"></div>
-          <div class="data-table-section" id="data-table-section"></div>
-        </div>
-
-        <!-- SIMULATION RESULTS (shown after Monte Carlo runs) -->
-        <div id="simulation-results" style="display:none;">
-          <div class="simulation-teaser" id="simulation-teaser">
-            <div class="teaser-content">
-              <span class="teaser-label">Simulation complete</span>
-              <span class="teaser-score" id="teaser-score"></span>
-            </div>
-            <button class="full-analysis-btn" id="full-analysis-btn">Full Analysis</button>
-          </div>
-
-          <!-- Expandable Full Analysis -->
-          <div class="full-analysis collapsed" id="full-analysis">
-            <div class="full-analysis-inner">
-              <div class="full-analysis-top">
-                <div class="full-analysis-histogram" id="probability-histogram"></div>
-                <div class="full-analysis-stats" id="simulation-stats"></div>
-              </div>
-              <div id="sensitivity-tornado"></div>
-              <div class="rec-triptych" id="simulation-rec-triptych">
-                <div class="rec-card rec-do">
-                  <h4>Do this</h4>
-                  <p id="sim-rec-do-text"></p>
-                </div>
-                <div class="rec-card rec-watch">
-                  <h4>Watch this</h4>
-                  <p id="sim-rec-watch-text"></p>
-                </div>
-                <div class="rec-card rec-pivot">
-                  <h4>Change if...</h4>
-                  <p id="sim-rec-pivot-text"></p>
-                </div>
-              </div>
-              <div class="simulation-sliders" id="simulation-sliders"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- LEGACY: Layer 1/2 for fallback mode (hidden in data mode) -->
-        <div class="layer-1" id="layer-1">
-          <div class="simulation-badge" id="simulation-badge"></div>
-          <div class="verdict-card">
-            <div class="score-circle-container" id="score-circle"></div>
-            <div class="verdict-text">
-              <div class="verdict-context" id="verdict-context"></div>
-              <div class="verdict-headline" id="verdict-headline">Analyzing...</div>
-              <div class="verdict-summary" id="verdict-summary"></div>
-              <div class="verdict-risk" id="verdict-risk"></div>
-            </div>
-          </div>
-          <div class="rec-triptych" id="rec-triptych">
-            <div class="rec-card rec-do"><h4>Do this</h4><p id="rec-do-text">Awaiting analysis...</p></div>
-            <div class="rec-card rec-watch"><h4>Watch this</h4><p id="rec-watch-text">Awaiting analysis...</p></div>
-            <div class="rec-card rec-pivot"><h4>Change if...</h4><p id="rec-pivot-text">Awaiting analysis...</p></div>
-          </div>
-          <div class="front-sliders" id="front-sliders"></div>
-          <div class="front-sliders-more hidden" id="front-sliders-more"></div>
-          <button class="more-vars-btn hidden" id="more-vars-btn">More variables <span class="chevron">&#9660;</span></button>
-          <button class="reset-sliders-btn hidden" id="reset-sliders-btn">Reset all</button>
-          <button class="show-why-btn" id="show-why-btn">Show me why <span class="chevron">&#9660;</span></button>
-        </div>
-        <div class="layer-2" id="layer-2">
-          <div class="range-bar-section">
-            <h3>Outcome distribution</h3>
-            <div class="range-bar-container" id="range-bar-container">
-              <div class="range-bar-canvas-wrap"><canvas id="range-bar-canvas"></canvas></div>
-              <div class="range-bar-summary" id="range-bar-summary"></div>
-            </div>
-          </div>
-          <div class="scenario-comparison" id="scenario-comparison"><h3>Scenario comparison</h3></div>
-          <div class="sensitivity-section">
-            <h3>What matters most</h3>
-            <div class="sensitivity-list" id="sensitivity-list"></div>
-          </div>
-          <div class="sim-count-toggle" id="sim-count-toggle">
-            <button class="sim-count-btn active" data-count="1000"><span class="sim-count-num">1,000</span><span class="sim-count-label">Fast</span></button>
-            <button class="sim-count-btn" data-count="5000"><span class="sim-count-num">5,000</span><span class="sim-count-label">Balanced</span></button>
-            <button class="sim-count-btn" data-count="10000"><span class="sim-count-num">10,000</span><span class="sim-count-label">Precise</span></button>
-          </div>
-          <div class="sim-count-hint">Higher = more precise results, slower updates</div>
-        </div>
-
-      </div>
-    </main>
+  <!-- Top bar -->
+  <div class="top-bar">
+    Built with <span class="highlight">Claude Opus 4.6</span> &middot; <span class="highlight">Anthropic</span> Hackathon &middot; Feb 2026
   </div>
 
-  <!-- Scripts in correct load order -->
-  <script src="/js/demo-data.js"></script>
-  <script src="/js/csv-analyzer.js"></script>
-  <script src="/js/carlo.js"></script>
-  <script src="/js/nassim.js"></script>
-  <script src="/js/chart-renderer.js"></script>
-  <script src="/js/visualizations.js"></script>
-  <script src="/js/dashboard.js"></script>
-  <script src="/js/chat.js"></script>
+  <!-- Hero -->
+  <div class="hero">
+
+    <!-- Prism SVG icon -->
+    <div class="prism-icon">
+      <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="prismGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#2563eb"/>
+            <stop offset="50%" stop-color="#E3B2B3"/>
+            <stop offset="100%" stop-color="#10B981"/>
+          </linearGradient>
+        </defs>
+        <path d="M28 6 L50 46 L6 46 Z" stroke="url(#prismGrad)" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <!-- Brand -->
+    <h1 class="brand">PRISMA</h1>
+
+    <!-- Tagline -->
+    <p class="tagline">1,000 futures. One decision.</p>
+
+    <!-- CTA -->
+    <a href="app.html" class="cta" id="cta-btn">
+      Run Your First Simulation
+      <span style="transition: transform 0.2s ease; display: inline-block;">&rarr;</span>
+    </a>
+
+    <!-- Accent line -->
+    <div class="accent-line"></div>
+
+    <!-- Mini simulation bars -->
+    <div class="mini-sim">
+      <div class="sim-row">
+        <span class="sim-label">Hire</span>
+        <div class="sim-bar-track"><div class="sim-bar-fill"></div></div>
+        <span class="sim-value">+&euro;1,800</span>
+      </div>
+      <div class="sim-row">
+        <span class="sim-label">Restructure</span>
+        <div class="sim-bar-track"><div class="sim-bar-fill"></div></div>
+        <span class="sim-value">+&euro;400</span>
+      </div>
+      <div class="sim-row">
+        <span class="sim-label">Do Nothing</span>
+        <div class="sim-bar-track"><div class="sim-bar-fill"></div></div>
+        <span class="sim-value">&minus;&euro;2,100</span>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <p class="description">
+      Your data has a story. <strong>Prisma</strong> reads it,
+      runs 1,000 simulations, and shows you
+      what to do &mdash; before you commit.
+    </p>
+
+    <!-- Credits -->
+    <p class="credits">Muzaffer Hizel &middot; 2026</p>
+
+  </div>
+
+  <script>
+    // CTA: fade out then navigate
+    document.getElementById('cta-btn').addEventListener('click', function(e) {
+      e.preventDefault();
+      const href = this.getAttribute('href');
+      document.body.classList.add('fade-out');
+      setTimeout(() => { window.location.href = href; }, 400);
+    });
+  </script>
+
 </body>
 </html>

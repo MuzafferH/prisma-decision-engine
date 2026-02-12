@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRISMA — Upload data. See 1,000 futures.</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <!-- Preload pixel font -->
+  <link rel="preload" href="/fonts/GeistPixel-Triangle.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet">
+  <!-- External libs -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <div class="prisma-app pre-upload">
+    <!-- HEADER -->
+    <header class="prisma-header">
+      <div class="header-left">
+        <span class="logo logo-pixel">PRISMA</span>
+        <span class="tagline">Upload data. See 1,000 futures.</span>
+      </div>
+      <div class="header-right">
+        <span class="tier-badge" id="tier-badge">Data Intelligence</span>
+      </div>
+    </header>
+
+    <!-- MAIN: Chat (35%) + Answer Panel (65%) -->
+    <main class="prisma-main">
+      <!-- CHAT PANEL -->
+      <aside class="chat-panel">
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-area">
+          <textarea id="chat-input" placeholder="Ask a what-if question..." rows="2"></textarea>
+          <div class="chat-actions">
+            <button class="btn-send" id="send-btn">Send</button>
+            <label class="btn-upload" for="file-upload">
+              <span>📎</span>
+            </label>
+            <input type="file" id="file-upload" accept=".csv" hidden>
+          </div>
+        </div>
+        <div class="privacy-notice">
+          Processed by Anthropic API. Not stored. Don't share passwords or credentials.
+        </div>
+      </aside>
+
+      <!-- ANSWER PANEL -->
+      <div class="answer-panel" id="answer-panel">
+
+        <!-- UPLOAD LANDING (shown before CSV upload) -->
+        <div class="upload-landing" id="panel-dormant">
+          <div class="upload-drop-zone" id="upload-drop-zone">
+            <div class="upload-icon">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="8" y="8" width="32" height="32" rx="4" stroke="#D5D5D0" stroke-width="1.5" fill="none"/>
+                <line x1="8" y1="16" x2="40" y2="16" stroke="#D5D5D0" stroke-width="1"/>
+                <line x1="8" y1="24" x2="40" y2="24" stroke="#E5E5E0" stroke-width="1"/>
+                <line x1="8" y1="32" x2="40" y2="32" stroke="#E5E5E0" stroke-width="1"/>
+                <line x1="20" y1="8" x2="20" y2="40" stroke="#E5E5E0" stroke-width="1"/>
+                <line x1="32" y1="8" x2="32" y2="40" stroke="#E5E5E0" stroke-width="1"/>
+                <path d="M24 4 L28 12 L20 12 Z" fill="#2563EB" opacity="0.6"/>
+              </svg>
+            </div>
+            <h2>Drop a CSV to see 1,000 futures</h2>
+            <p>or click to browse</p>
+            <input type="file" id="landing-file-upload" accept=".csv" hidden>
+            <span class="upload-hint">.csv files up to 10MB</span>
+          </div>
+        </div>
+
+        <!-- DATA OVERVIEW (shown after CSV upload) -->
+        <div id="data-overview" style="display:none;">
+          <div class="data-summary-card" id="data-summary-card"></div>
+          <div class="kpi-strip" id="kpi-strip"></div>
+          <div class="chart-grid" id="chart-grid"></div>
+          <div class="insights-section" id="insights-section"></div>
+          <div class="data-table-section" id="data-table-section"></div>
+        </div>
+
+        <!-- SIMULATION RESULTS (shown after Monte Carlo runs) -->
+        <div id="simulation-results" style="display:none;">
+          <div class="simulation-teaser" id="simulation-teaser">
+            <div class="teaser-content">
+              <span class="teaser-label">Simulation complete</span>
+              <span class="teaser-score" id="teaser-score"></span>
+            </div>
+            <button class="full-analysis-btn" id="full-analysis-btn">Full Analysis</button>
+          </div>
+
+          <!-- Expandable Full Analysis -->
+          <div class="full-analysis collapsed" id="full-analysis">
+            <div class="full-analysis-inner">
+              <div class="full-analysis-top">
+                <div class="full-analysis-histogram" id="probability-histogram"></div>
+                <div class="full-analysis-stats" id="simulation-stats"></div>
+              </div>
+              <div id="sensitivity-tornado"></div>
+              <div class="rec-triptych" id="simulation-rec-triptych">
+                <div class="rec-card rec-do">
+                  <h4>Do this</h4>
+                  <p id="sim-rec-do-text"></p>
+                </div>
+                <div class="rec-card rec-watch">
+                  <h4>Watch this</h4>
+                  <p id="sim-rec-watch-text"></p>
+                </div>
+                <div class="rec-card rec-pivot">
+                  <h4>Change if...</h4>
+                  <p id="sim-rec-pivot-text"></p>
+                </div>
+              </div>
+              <div class="simulation-sliders" id="simulation-sliders"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LEGACY: Layer 1/2 for fallback mode (hidden in data mode) -->
+        <div class="layer-1" id="layer-1">
+          <div class="simulation-badge" id="simulation-badge"></div>
+          <div class="verdict-card">
+            <div class="score-circle-container" id="score-circle"></div>
+            <div class="verdict-text">
+              <div class="verdict-context" id="verdict-context"></div>
+              <div class="verdict-headline" id="verdict-headline">Analyzing...</div>
+              <div class="verdict-summary" id="verdict-summary"></div>
+              <div class="verdict-risk" id="verdict-risk"></div>
+            </div>
+          </div>
+          <div class="rec-triptych" id="rec-triptych">
+            <div class="rec-card rec-do"><h4>Do this</h4><p id="rec-do-text">Awaiting analysis...</p></div>
+            <div class="rec-card rec-watch"><h4>Watch this</h4><p id="rec-watch-text">Awaiting analysis...</p></div>
+            <div class="rec-card rec-pivot"><h4>Change if...</h4><p id="rec-pivot-text">Awaiting analysis...</p></div>
+          </div>
+          <div class="front-sliders" id="front-sliders"></div>
+          <div class="front-sliders-more hidden" id="front-sliders-more"></div>
+          <button class="more-vars-btn hidden" id="more-vars-btn">More variables <span class="chevron">&#9660;</span></button>
+          <button class="reset-sliders-btn hidden" id="reset-sliders-btn">Reset all</button>
+          <button class="show-why-btn" id="show-why-btn">Show me why <span class="chevron">&#9660;</span></button>
+        </div>
+        <div class="layer-2" id="layer-2">
+          <div class="range-bar-section">
+            <h3>Outcome distribution</h3>
+            <div class="range-bar-container" id="range-bar-container">
+              <div class="range-bar-canvas-wrap"><canvas id="range-bar-canvas"></canvas></div>
+              <div class="range-bar-summary" id="range-bar-summary"></div>
+            </div>
+          </div>
+          <div class="scenario-comparison" id="scenario-comparison"><h3>Scenario comparison</h3></div>
+          <div class="sensitivity-section">
+            <h3>What matters most</h3>
+            <div class="sensitivity-list" id="sensitivity-list"></div>
+          </div>
+          <div class="sim-count-toggle" id="sim-count-toggle">
+            <button class="sim-count-btn active" data-count="1000"><span class="sim-count-num">1,000</span><span class="sim-count-label">Fast</span></button>
+            <button class="sim-count-btn" data-count="5000"><span class="sim-count-num">5,000</span><span class="sim-count-label">Balanced</span></button>
+            <button class="sim-count-btn" data-count="10000"><span class="sim-count-num">10,000</span><span class="sim-count-label">Precise</span></button>
+          </div>
+          <div class="sim-count-hint">Higher = more precise results, slower updates</div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts in correct load order -->
+  <script src="/js/demo-data.js"></script>
+  <script src="/js/csv-analyzer.js"></script>
+  <script src="/js/carlo.js"></script>
+  <script src="/js/nassim.js"></script>
+  <script src="/js/chart-renderer.js"></script>
+  <script src="/js/visualizations.js"></script>
+  <script src="/js/dashboard.js"></script>
+  <script src="/js/chat.js"></script>
+</body>
+</html>

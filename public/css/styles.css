@@ -8,15 +8,15 @@
    ============================================= */
 
 :root {
-  /* Backgrounds */
-  --bg:     #FAFAF8;
-  --bg2:    #F5F5F0;
-  --bg3:    #EEEEE8;
+  /* Backgrounds — warm off-white */
+  --bg:     #F5F0F0;
+  --bg2:    #f9f1f1;
+  --bg3:    #f4ecec;
 
   /* Text */
-  --text:   #1A1A1A;
-  --text2:  #6B6B6B;
-  --text3:  #9B9B9B;
+  --text:   #14141C;
+  --text2:  #43394c;
+  --text3:  #786065;
 
   /* Verdict colors */
   --strong:     #10B981;
@@ -27,9 +27,9 @@
   /* Accent */
   --accent:  #2563EB;
 
-  /* Borders */
-  --border:  #E5E5E0;
-  --border2: #D5D5D0;
+  /* Borders — rose tint, increased opacity */
+  --border:  rgba(245, 192, 192, 0.28);
+  --border2: rgba(245, 192, 192, 0.35);
 
   /* Risk classification colors */
   --strong:        #10B981;
@@ -40,6 +40,19 @@
   /* Fonts */
   --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
   --font-mono: 'Geist Mono', 'SF Mono', monospace;
+  --font-pixel: 'Geist Pixel Triangle', monospace;
+}
+
+/* =============================================
+   1b. PIXEL FONT
+   ============================================= */
+
+@font-face {
+  font-family: 'Geist Pixel Triangle';
+  src: url('/fonts/GeistPixel-Triangle.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
 /* =============================================
@@ -71,6 +84,20 @@ body {
   -webkit-font-smoothing: antialiased;
   font-weight: 400;
   line-height: 1.6;
+  position: relative;
+}
+
+/* Noise texture overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.35;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(200, 180, 170, 0.12) 0%, transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(180, 170, 190, 0.08) 0%, transparent 50%);
 }
 
 /* =============================================
@@ -111,6 +138,23 @@ body {
   letter-spacing: 0.04em;
   color: var(--text);
   text-transform: uppercase;
+}
+
+.logo-pixel {
+  font-family: var(--font-pixel);
+  font-weight: 400;
+  font-size: 20px;
+  letter-spacing: 0.06em;
+}
+
+/* Fade-in on app load */
+.prisma-app {
+  animation: appFadeIn 0.5s ease;
+}
+
+@keyframes appFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .tagline {
