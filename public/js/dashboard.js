@@ -1349,6 +1349,10 @@ Dashboard.setupUploadZone = function() {
  * Show skeleton loading state immediately after upload (no dead screen).
  */
 Dashboard.showSkeletonLoading = function() {
+  // Reveal chat panel by removing pre-upload state
+  const app = document.querySelector('.prisma-app');
+  if (app) app.classList.remove('pre-upload');
+
   if (typeof ChartRenderer !== 'undefined') {
     ChartRenderer.renderSkeletonLoading();
   }
@@ -1358,6 +1362,10 @@ Dashboard.showSkeletonLoading = function() {
  * Show the data overview (charts, KPIs, insights) after Claude responds.
  */
 Dashboard.showDataOverview = function() {
+  // Ensure chat panel is visible
+  const app = document.querySelector('.prisma-app');
+  if (app) app.classList.remove('pre-upload');
+
   const dormant = document.getElementById('panel-dormant');
   const dataOverview = document.getElementById('data-overview');
 

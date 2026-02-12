@@ -162,6 +162,19 @@ body {
   min-height: 0;
 }
 
+/* Before CSV upload: hide chat, drop zone takes full width */
+.prisma-app.pre-upload .chat-panel {
+  display: none;
+}
+
+.prisma-app.pre-upload .answer-panel {
+  width: 100%;
+}
+
+.prisma-app.pre-upload .upload-landing {
+  min-height: 100%;
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -1539,13 +1552,13 @@ input[type="range"]::-moz-range-thumb {
 .upload-drop-zone {
   position: relative;
   width: 100%;
-  max-width: 480px;
-  padding: 56px 40px;
+  max-width: 560px;
+  padding: 72px 48px;
   text-align: center;
   background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(12px);
-  border: 1.5px solid var(--border);
-  border-radius: 16px;
+  border: 2px dashed var(--border2);
+  border-radius: 20px;
   transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
   cursor: pointer;
 }
@@ -1573,11 +1586,11 @@ input[type="range"]::-moz-range-thumb {
 
 .upload-drop-zone h2 {
   font-family: var(--font-sans);
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 800;
   color: var(--text);
-  margin-bottom: 6px;
-  letter-spacing: -0.01em;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
 }
 
 .upload-drop-zone p {
