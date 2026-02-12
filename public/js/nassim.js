@@ -96,15 +96,6 @@ const Nassim = {
     }
 
     return classifications;
-
-      return {
-        ...variable,
-        min: center - newRange / 2,
-        max: center + newRange / 2
-      };
-    });
-
-    return highVarData;
   },
 
   /**
