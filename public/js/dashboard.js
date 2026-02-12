@@ -46,7 +46,8 @@ const Dashboard = {
   _csvAnalysis: null,             // CSVAnalyzer output
   _dataOverviewRendered: false,   // Prevent double renders
   _simulationVisible: false,      // Full Analysis expanded
-  _futuresCascadePlayed: false    // Futures Cascade animation played once
+  _futuresCascadePlayed: false,   // Futures Cascade animation played once
+  _lastSimulationPrompt: null     // Label for current simulation
 };
 
 /**
@@ -1379,6 +1380,7 @@ Dashboard.showDataOverview = function() {
 Dashboard.showSimulationTeaser = function() {
   const simResults = document.getElementById('simulation-results');
   const teaserScore = document.getElementById('teaser-score');
+  const teaserLabel = document.querySelector('.teaser-label');
   const fullAnalysisBtn = document.getElementById('full-analysis-btn');
 
   if (!simResults || !Dashboard.carloResults) return;
@@ -1396,16 +1398,36 @@ Dashboard.showSimulationTeaser = function() {
     }
   }
 
-  // Show teaser
+  // Show teaser with simulation label
   simResults.style.display = 'block';
   if (teaserScore) {
     teaserScore.textContent = Math.round(bestPctPositive) + '% positive outcome';
+  }
+  if (teaserLabel && Dashboard._lastSimulationPrompt) {
+    teaserLabel.textContent = Dashboard._lastSimulationPrompt;
   }
 
   // Add shine to button
   if (fullAnalysisBtn) {
     fullAnalysisBtn.classList.add('shine');
+    fullAnalysisBtn.classList.remove('expanded');
+    fullAnalysisBtn.textContent = 'Full Analysis';
     fullAnalysisBtn.addEventListener('click', () => Dashboard.toggleFullAnalysis(), { once: false });
+  }
+
+  // Reset cascade for new simulation
+  Dashboard._futuresCascadePlayed = false;
+  Dashboard._simulationVisible = false;
+  const fullAnalysis = document.getElementById('full-analysis');
+  if (fullAnalysis) {
+    fullAnalysis.classList.remove('expanded');
+    fullAnalysis.classList.add('collapsed');
+  }
+
+  // Chat confirmation
+  if (typeof Chat !== 'undefined') {
+    const pct = Math.round(bestPctPositive);
+    Chat.displayMessage('assistant', 'Simulation complete \u2014 ' + pct + '% of 1,000 futures come out positive. Click "Full Analysis" on the right to explore the results.');
   }
 
   // Scroll into view

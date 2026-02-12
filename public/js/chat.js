@@ -141,11 +141,14 @@ Chat.sendMessage = async function() {
         };
       }
     } else {
+      // Trim conversation to prevent overflow (keep CSV context + recent messages)
+      const trimmedMessages = Chat._trimMessages(this.messages);
+
       // Real API call
       const apiResponse = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: this.messages })
+        body: JSON.stringify({ messages: trimmedMessages })
       });
 
       if (!apiResponse.ok) {
@@ -259,11 +262,12 @@ Chat.sendFollowUp = async function() {
         stopReason: 'end_turn'
       };
     } else {
-      // Real API call
+      // Real API call (trimmed to prevent overflow)
+      const trimmedMessages = Chat._trimMessages(this.messages);
       const apiResponse = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: this.messages })
+        body: JSON.stringify({ messages: trimmedMessages })
       });
 
       if (!apiResponse.ok) {
@@ -358,6 +362,9 @@ Chat.displayMessage = function(role, text) {
       messageDiv.classList.add('error-message');
     }
   }
+
+  // Decode unicode escapes like \u20ac → €
+  text = text.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
 
   // Format text with basic paragraph/line break support
   // Split by double newlines for paragraphs
@@ -659,9 +666,42 @@ Analyze this data. Generate chart specs, KPI cards, and insights with simulation
  */
 Chat.triggerSimulation = function(prompt) {
   if (this.isLoading) return;
+  // Store the simulation label so we can show it in the teaser
+  Dashboard._lastSimulationPrompt = prompt;
   const chatInput = document.getElementById('chat-input');
   if (chatInput) chatInput.value = prompt;
   this.sendMessage();
+};
+
+/**
+ * Trim conversation messages to prevent overflow.
+ * Keeps the first message (CSV context) + last 8 messages.
+ * Compresses old tool_use blocks to just their phase name.
+ */
+Chat._trimMessages = function(messages) {
+  if (messages.length <= 10) return messages;
+
+  // Keep first message (CSV upload context) and last 8
+  const first = messages[0];
+  const recent = messages.slice(-8);
+
+  // Build a summary of what was trimmed
+  const trimmed = [first];
+
+  // Add a bridge message so Claude knows there was prior conversation
+  trimmed.push({
+    role: 'user',
+    content: '[Prior conversation trimmed for context. Data overview was generated. User is now asking follow-up questions.]'
+  });
+  trimmed.push({
+    role: 'assistant',
+    content: 'Understood. I have the data context from the CSV upload. How can I help?'
+  });
+
+  // Add recent messages
+  trimmed.push(...recent);
+
+  return trimmed;
 };
 
 // Initialize on page load
