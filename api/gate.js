@@ -3,7 +3,7 @@
 // POST with X-Prisma-Auth header → validates password, returns {valid: true/false}
 
 module.exports = function handler(req, res) {
-  const gatePassword = process.env.PRISMA_GATE_PASSWORD;
+  const gatePassword = (process.env.PRISMA_GATE_PASSWORD || '').trim();
 
   if (req.method === 'POST') {
     if (!gatePassword) {
