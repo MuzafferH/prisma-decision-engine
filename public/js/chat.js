@@ -590,10 +590,11 @@ Analyze this data. Generate chart specs, KPI cards, and insights with simulation
     this.isLoading = true;
 
     try {
+      const trimmedMessages = Chat._trimMessages(this.messages);
       const apiResponse = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: this.messages })
+        body: JSON.stringify({ messages: trimmedMessages })
       });
 
       this.hideTypingIndicator();
@@ -611,7 +612,6 @@ Analyze this data. Generate chart specs, KPI cards, and insights with simulation
       // Display Claude's chat message
       if (response.message) {
         this.displayMessage('assistant', response.message);
-        this.messages.push({ role: 'assistant', content: response.message });
       }
 
       // Handle tool call (data_overview or simulation)
@@ -620,15 +620,18 @@ Analyze this data. Generate chart specs, KPI cards, and insights with simulation
           this.onDashboardUpdate(response.toolCall);
         }
 
-        // Add tool_use + tool_result to conversation history
+        // Combine text + tool_use in ONE assistant message (API requires alternating roles)
         this.messages.push({
           role: 'assistant',
-          content: [{
-            type: 'tool_use',
-            id: response.toolCall.id || 'tool_1',
-            name: response.toolCall.name || 'update_dashboard',
-            input: response.toolCall.input
-          }]
+          content: [
+            { type: 'text', text: response.message || '' },
+            {
+              type: 'tool_use',
+              id: response.toolCall.id || 'tool_1',
+              name: response.toolCall.name || 'update_dashboard',
+              input: response.toolCall.input
+            }
+          ]
         });
         this.messages.push({
           role: 'user',
@@ -640,9 +643,12 @@ Analyze this data. Generate chart specs, KPI cards, and insights with simulation
         });
 
         // Follow up if needed
-        if (response.stopReason === 'tool_use' && this.messages.length < 25) {
+        if (response.stopReason === 'tool_use' && this.messages.length < 60) {
           await this.sendFollowUp();
         }
+      } else if (response.message) {
+        // No tool call — just add text to history
+        this.messages.push({ role: 'assistant', content: response.message });
       }
 
     } catch (fetchError) {
@@ -675,6 +681,7 @@ Chat.triggerSimulation = function(prompt) {
 
 /**
  * Compress a single message, stripping bulky tool_use inputs down to phase name.
+ * Keeps the tool_use structure valid (prismaData as object, not string).
  */
 Chat._compressMessage = function(msg) {
   if (!Array.isArray(msg.content)) return msg;
@@ -682,11 +689,12 @@ Chat._compressMessage = function(msg) {
   const compressed = msg.content.map(block => {
     if (block.type === 'tool_use') {
       // Keep only the phase — drop the massive prismaData payload
+      // prismaData must stay an object (not string) to pass API schema validation
       return {
         type: 'tool_use',
         id: block.id,
         name: block.name,
-        input: { phase: block.input?.phase || 'simulation', prismaData: '[compressed — see prior context]' }
+        input: { phase: block.input?.phase || 'simulation', prismaData: { _compressed: true } }
       };
     }
     return block;

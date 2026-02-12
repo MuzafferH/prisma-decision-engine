@@ -500,9 +500,12 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Generic fallback
+    // Generic fallback — include status for client-side debugging
+    const statusHint = error.status ? ` (${error.status})` : '';
+    const briefMessage = error.message ? error.message.slice(0, 120) : '';
+    console.error('Anthropic API full error:', JSON.stringify({ status: error.status, type: error.type, message: error.message }));
     return res.status(500).json({
-      error: 'Prisma encountered an error. Please try again.',
+      error: `Prisma encountered an error${statusHint}. ${briefMessage}`,
       code: 'API_ERROR'
     });
   }
