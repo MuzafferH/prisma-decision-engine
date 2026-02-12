@@ -344,6 +344,17 @@ const ChartRenderer = {
         legend: { font: { size: 10 }, orientation: 'h', y: -0.15 }
       };
 
+      // Force categorical x-axis when labels aren't numeric/dates
+      // This prevents Plotly from misinterpreting day names, zones, etc. as dates
+      if (spec.type !== 'pie' && labels.length > 0) {
+        const firstLabel = String(labels[0]);
+        const looksNumeric = !isNaN(parseFloat(firstLabel)) && isFinite(firstLabel);
+        const looksLikeDate = !isNaN(Date.parse(firstLabel)) && firstLabel.length > 8;
+        if (!looksNumeric && !looksLikeDate) {
+          layout.xaxis = { ...layout.xaxis, type: 'category' };
+        }
+      }
+
       // Pie charts need different layout
       if (spec.type === 'pie') {
         layout.margin = { t: 8, b: 8, l: 8, r: 8 };
@@ -489,7 +500,7 @@ const ChartRenderer = {
       if (insight.severity) {
         const severity = document.createElement('span');
         severity.className = 'insight-severity ' + insight.severity;
-        severity.textContent = insight.severity.toUpperCase();
+        severity.textContent = 'Impact: ' + insight.severity.charAt(0).toUpperCase() + insight.severity.slice(1);
         card.appendChild(severity);
       }
 

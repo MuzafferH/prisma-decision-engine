@@ -334,7 +334,9 @@ Chat.sendFollowUp = async function() {
     this.hideTypingIndicator();
     this.isLoading = false;
     sendBtn.disabled = false;
-    this.displayMessage('error', 'Failed to continue the conversation. Please try sending another message.');
+    // Don't show error for follow-ups — the dashboard already rendered from the tool call.
+    // The follow-up is just for Claude's chat message, which is nice-to-have, not critical.
+    console.log('[Chat] Follow-up failed (non-critical — dashboard already updated)');
   }
 };
 

@@ -1546,10 +1546,12 @@ const Visualizations = {
       legend: { font: { size: 10 }, orientation: 'h', y: -0.15 },
       xaxis: {
         ...PRISMA_CHART_LAYOUT.xaxis,
+        type: 'linear',
         title: { text: unit, font: { size: 10, color: '#9B9B9B' } }
       },
       yaxis: {
         ...PRISMA_CHART_LAYOUT.yaxis,
+        type: 'linear',
         title: { text: 'Frequency', font: { size: 10, color: '#9B9B9B' } }
       },
       margin: { t: 8, b: 48, l: 56, r: 16 },
