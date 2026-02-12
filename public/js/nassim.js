@@ -288,36 +288,61 @@ const Nassim = {
     else if (score >= 40) color = '#F59E0B';
     else color = '#EF4444';
 
-    // Summary: structured parts so renderer can bold key values
-    // Each part is {text, bold} — bold parts get <strong>
-    const medianStr = Visualizations._formatNumber(summary.median) + ' ' + unit;
-    const pctStr = classification.percentPositive.toFixed(0) + '%';
-    const summaryParts = [
-      { text: 'Most likely outcome: ' },
-      { text: medianStr, bold: true },
-      { text: '. In ' },
-      { text: pctStr, bold: true },
-      { text: ' of 1,000 simulated futures, this decision comes out positive.' }
-    ];
+    // Summary — conversational, not technical
+    const medianStr = Visualizations._formatNumber(Math.abs(summary.median)) + ' ' + unit;
+    const pctRound = Math.round(classification.percentPositive);
+    let summaryParts;
 
-    // Risk: structured parts
+    if (summary.median >= 0 && pctRound >= 60) {
+      // Positive outcome, good odds
+      summaryParts = [
+        { text: 'You\'d likely ' },
+        { text: 'gain about ' + medianStr, bold: true },
+        { text: '. ' },
+        { text: pctRound + ' out of 100', bold: true },
+        { text: ' simulated futures come out ahead.' }
+      ];
+    } else if (summary.median >= 0) {
+      // Positive outcome, borderline odds
+      summaryParts = [
+        { text: 'The typical outcome is a ' },
+        { text: 'gain of ' + medianStr, bold: true },
+        { text: ', but only ' },
+        { text: pctRound + ' out of 100', bold: true },
+        { text: ' futures are positive. It\'s a coin toss.' }
+      ];
+    } else if (pctRound >= 20) {
+      // Negative outcome, some hope
+      summaryParts = [
+        { text: 'You\'d most likely ' },
+        { text: 'lose about ' + medianStr, bold: true },
+        { text: '. Only ' },
+        { text: pctRound + ' out of 100', bold: true },
+        { text: ' futures come out ahead.' }
+      ];
+    } else {
+      // Negative outcome, very few positive futures
+      summaryParts = [
+        { text: 'You\'d most likely ' },
+        { text: 'lose about ' + medianStr, bold: true },
+        { text: '. Almost none of the simulated futures (' },
+        { text: pctRound + '%', bold: true },
+        { text: ') come out positive.' }
+      ];
+    }
+
+    // Risk — plain language
     let riskParts = [];
     const p10Str = Visualizations._formatNumber(Math.abs(summary.p10)) + ' ' + unit;
-    if (cls === 'HIGH_RISK') {
+    if (summary.p10 < 0) {
       riskParts = [
-        { text: 'In the worst 10% of futures, losses reach ' },
-        { text: p10Str, bold: true },
-        { text: '.' }
-      ];
-    } else if (summary.p10 < 0) {
-      riskParts = [
-        { text: 'Downside: the worst 10% of futures show losses of ' },
+        { text: 'Worst case (bottom 10%): you could lose up to ' },
         { text: p10Str, bold: true },
         { text: '.' }
       ];
     } else {
       riskParts = [
-        { text: 'Even in the worst 10%, the outcome stays at ' },
+        { text: 'Even in the worst scenarios, you\'d still be at ' },
         { text: Visualizations._formatNumber(summary.p10) + ' ' + unit, bold: true },
         { text: '.' }
       ];

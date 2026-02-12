@@ -925,46 +925,42 @@ Dashboard.generateDynamicRecommendations = function() {
     }
   }
 
-  // --- Action card (winning scenario) ---
+  // --- Action card (winning scenario) — plain, friendly language ---
   let action;
   if (bestScore >= 80) {
-    action = `Go with ${bestLabel}. It scores ${bestScore}/100 — ${pctPositive}% of simulated futures come out positive, with a median outcome of ${medianStr} ${unit}.${tensionNote}`;
+    action = `${bestLabel} is your best move. ${pctPositive} out of 100 simulated futures come out positive, with a typical gain of ${medianStr} ${unit}.${tensionNote}`;
   } else if (bestScore >= 60) {
-    action = `${bestLabel} is your strongest option at ${bestScore}/100. ${pctPositive}% of futures are positive with a median of ${medianStr} ${unit} — solid, with manageable downside.${tensionNote}`;
+    action = `${bestLabel} comes out on top. It works in ${pctPositive} out of 100 futures, with a typical outcome of ${medianStr} ${unit}. Not a slam dunk, but the best of your options.${tensionNote}`;
   } else if (bestScore >= 40) {
-    action = `${bestLabel} edges ahead at ${bestScore}/100, but it's close. ${pctPositive}% of futures are positive — consider risk mitigation before committing.${tensionNote}`;
+    action = `${bestLabel} is slightly ahead of the other options, but it's close. Only ${pctPositive} out of 100 futures are positive — think about ways to reduce your downside.${tensionNote}`;
   } else {
-    action = `${bestLabel} is the least bad option at ${bestScore}/100. Only ${pctPositive}% of futures are positive. Explore ways to reduce downside before deciding.${tensionNote}`;
+    action = `None of your options look great right now. ${bestLabel} is the best of the bunch, but only ${pctPositive} out of 100 futures come out positive. Consider whether this is the right time, or if you can change the conditions.${tensionNote}`;
   }
 
-  // --- Watch card (top sensitivity variable) ---
+  // --- Watch card (top sensitivity variable) — what matters most ---
   let watch;
   if (topVar) {
     const directionText = topVarDirection === 'above'
-      ? 'currently above the baseline'
+      ? 'currently set above the starting point'
       : topVarDirection === 'below'
-        ? 'currently below the baseline'
-        : 'sitting near the baseline';
+        ? 'currently set below the starting point'
+        : 'at its starting value';
 
-    if (topVar.totalSwing > 0) {
-      watch = `${topVarLabel} is your biggest lever — it swings the outcome by ${topVarSwing} ${unit}. It's ${directionText}. Small shifts here change everything.`;
-    } else {
-      watch = `Keep an eye on ${topVarLabel}. It has the most influence on your outcome and is ${directionText}.`;
-    }
+    watch = `${topVarLabel} is the #1 factor that changes your outcome. It's ${directionText} right now. Try dragging that slider to see how sensitive your results are.`;
   } else {
-    watch = 'Monitor all input variables — the simulation is sensitive to multiple factors at current settings.';
+    watch = 'Several variables affect your outcome equally. Try moving the sliders to see which one matters most for your situation.';
   }
 
-  // --- Trigger card (runner-up scenario) ---
+  // --- Trigger card (runner-up scenario) — when to switch ---
   let trigger;
   if (runnerUpId && runnerUpLabel) {
     const gap = bestScore - runnerUpScore;
     if (gap <= 5) {
-      trigger = `${runnerUpLabel} is neck and neck (scoring ${runnerUpScore}). If ${topVarLabel} shifts even slightly, it could become the better choice.`;
+      trigger = `${runnerUpLabel} is almost tied. If ${topVarLabel} changes even slightly, it could become the better choice. Keep both options on the table.`;
     } else if (gap <= 15) {
-      trigger = `Keep an eye on ${runnerUpLabel} (scoring ${runnerUpScore}). If ${topVarLabel} moves ${topVarDirection === 'above' ? 'back down' : 'higher'}, that becomes your better option.`;
+      trigger = `If conditions around ${topVarLabel} shift, take another look at ${runnerUpLabel} — it's not far behind.`;
     } else {
-      trigger = `${runnerUpLabel} scores ${runnerUpScore} — well behind for now. But if conditions change significantly around ${topVarLabel}, revisit it.`;
+      trigger = `${runnerUpLabel} is well behind right now. But if ${topVarLabel} changes significantly, come back and re-check.`;
     }
   } else {
     trigger = `If ${topVarLabel} shifts dramatically from current levels, re-run this analysis. The landscape could change.`;
