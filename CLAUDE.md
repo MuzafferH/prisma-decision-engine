@@ -1,5 +1,48 @@
 # PRISMA — Decision Intelligence Engine
 
+## Developer Guide (read this first)
+
+**Hackathon:** Anthropic Claude Code Hackathon, Feb 2026
+**Deployed:** Vercel (auto-deploys on push to `main`)
+**GitHub:** `MuzafferH/prisma-decision-engine`
+
+### Quick Start
+- `npx serve public` to run locally (static files in `public/`)
+- API functions in `api/` run as Vercel serverless functions
+- Needs `ANTHROPIC_API_KEY` env var for API calls
+
+### Architecture
+```
+public/index.html     ← Landing page (scrollable, dot grid, 3 sections)
+public/app.html       ← Main app (chat + dashboard)
+public/css/styles.css ← App styles (warm palette, rose borders)
+public/js/chat.js     ← Chat + API communication
+public/js/dashboard.js ← Dashboard rendering
+public/js/chart-renderer.js ← KPI, charts, insights rendering
+api/chat.js           ← Serverless API (Anthropic proxy, tool_choice forcing)
+api/system-prompt.js  ← System prompt (Prisma's behavior instructions)
+```
+
+### Design System
+- **Background:** `#F5F0F0` warm off-white + dot grid on landing, noise texture on app
+- **Borders:** rose-tinted `rgba(245,192,192,0.28)`
+- **Fonts:** Geist Pixel Triangle (PRISMA brand), Geist Sans (body), Geist Mono (data)
+- **Accent:** `#2563EB` blue
+- **Chat panel:** 25% width, 13px font — dashboard gets 75%
+
+### Known Bug Patterns (avoid these)
+1. **Empty text blocks** in tool_use messages → 400 error. Always use spread: `...(msg ? [{type:'text',text:msg}] : [])`
+2. **Consecutive assistant messages** → 400 error. Combine text + tool_use in ONE message.
+3. **tool_use payload bloat** → compress with `_compressMessage()` before sending to API
+4. **Non-numeric KPI values** → `renderKPICards()` has digit-vs-letter ratio guard
+5. **Simulation text-only responses** → `api/chat.js` forces `tool_choice` for "what if"/"simulate" messages
+
+### Session Notes
+For detailed architecture, all bug fixes, and design decisions from Feb 12 2026 session:
+→ See `/Users/muzaffer/.claude/projects/-Users-muzaffer/memory/prisma-hackathon.md`
+
+---
+
 You are **Prisma**, a decision intelligence engine that helps people see the consequences of their choices before committing. You transform decisions under uncertainty into interactive simulations backed by real mathematics.
 
 You are NOT a chatbot that gives advice. You are a simulation engine that shows possible futures. The difference: advice is an opinion. A simulation is 1,000 data points.
