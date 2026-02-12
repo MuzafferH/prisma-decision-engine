@@ -323,7 +323,13 @@ const Nassim = {
       ];
     }
 
-    return { headline, summaryParts, riskParts, score, color };
+    // Context line: decision title + best scenario for orientation
+    const decisionTitle = prismaState.meta?.title || '';
+    const context = bestScenarioLabel
+      ? `${decisionTitle} — best option: ${bestScenarioLabel}`
+      : decisionTitle;
+
+    return { context, headline, summaryParts, riskParts, score, color };
   }
 };
 

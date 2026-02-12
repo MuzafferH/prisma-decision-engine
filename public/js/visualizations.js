@@ -156,6 +156,9 @@ const Visualizations = {
     const summaryEl = document.getElementById('verdict-summary');
     const riskEl = document.getElementById('verdict-risk');
 
+    const contextEl = document.getElementById('verdict-context');
+    if (contextEl) contextEl.textContent = verdict.context || '';
+
     if (headlineEl) headlineEl.textContent = verdict.headline || '';
 
     // Build summary with bold key numbers

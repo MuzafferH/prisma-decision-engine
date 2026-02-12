@@ -487,6 +487,14 @@ body {
   min-width: 0;
 }
 
+.verdict-context {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text3);
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
 .verdict-headline {
   font-family: var(--font-sans);
   font-size: 20px;
