@@ -65,6 +65,12 @@ Dashboard.init = function() {
   // Set up progressive disclosure controls
   Dashboard.setupDisclosure();
 
+  // Full Analysis toggle (attach once — not per-simulation)
+  const fullAnalysisBtn = document.getElementById('full-analysis-btn');
+  if (fullAnalysisBtn) {
+    fullAnalysisBtn.addEventListener('click', () => Dashboard.toggleFullAnalysis());
+  }
+
   // Set up upload drop zone (Prisma 2.0)
   Dashboard.setupUploadZone();
 
@@ -1415,12 +1421,11 @@ Dashboard.showSimulationTeaser = function() {
     teaserLabel.textContent = Dashboard._lastSimulationPrompt;
   }
 
-  // Add shine to button
+  // Reset button state for new simulation (listener attached once in init)
   if (fullAnalysisBtn) {
     fullAnalysisBtn.classList.add('shine');
     fullAnalysisBtn.classList.remove('expanded');
     fullAnalysisBtn.textContent = 'Full Analysis';
-    fullAnalysisBtn.addEventListener('click', () => Dashboard.toggleFullAnalysis(), { once: false });
   }
 
   // Reset cascade for new simulation
