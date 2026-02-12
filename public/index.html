@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PRISMA — 1,000 futures. One decision.</title>
-  <meta name="description" content="Upload data, run 1,000 Monte Carlo simulations, and see what to do before you commit.">
+  <title>PRISMA — See what happens before it happens.</title>
+  <meta name="description" content="Upload your data. Prisma finds what you're missing, then simulates every path forward — so you decide with evidence, not instinct.">
 
   <!-- Preload pixel font -->
   <link rel="preload" href="/fonts/GeistPixel-Triangle.woff2" as="font" type="font/woff2" crossorigin>
@@ -158,9 +158,21 @@
       font-size: 20px;
       font-weight: 600;
       color: var(--text2);
-      margin-bottom: 32px;
+      margin-bottom: 12px;
       opacity: 0;
       animation: fadeUp 0.6s var(--ease-out) 0.50s forwards;
+    }
+
+    /* ====== SUBTITLE ====== */
+    .subtitle {
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--text3);
+      line-height: 1.6;
+      margin-bottom: 32px;
+      opacity: 0;
+      animation: fadeUp 0.6s var(--ease-out) 0.60s forwards;
     }
 
     /* ====== CTA BUTTON ====== */
@@ -234,7 +246,7 @@
       font-size: 12px;
       font-weight: 500;
       color: var(--text2);
-      min-width: 90px;
+      min-width: 100px;
       text-align: right;
     }
     .sim-bar-track {
@@ -348,7 +360,7 @@
 
   <!-- Top bar -->
   <div class="top-bar">
-    Built with <span class="highlight">Claude Opus 4.6</span> &middot; <span class="highlight">Anthropic</span> Hackathon &middot; Feb 2026
+    Built with <span class="highlight">Claude</span> &middot; <span class="highlight">Anthropic</span> Hackathon 2026
   </div>
 
   <!-- Hero -->
@@ -372,11 +384,14 @@
     <h1 class="brand">PRISMA</h1>
 
     <!-- Tagline -->
-    <p class="tagline">1,000 futures. One decision.</p>
+    <p class="tagline">See what happens before it happens.</p>
+
+    <!-- Subtitle -->
+    <p class="subtitle">Upload your data. Prisma finds what you&rsquo;re missing &mdash;<br>then simulates what happens next.</p>
 
     <!-- CTA -->
     <a href="app.html" class="cta" id="cta-btn">
-      Run Your First Simulation
+      Test Your First Decision
       <span style="transition: transform 0.2s ease; display: inline-block;">&rarr;</span>
     </a>
 
@@ -386,27 +401,27 @@
     <!-- Mini simulation bars -->
     <div class="mini-sim">
       <div class="sim-row">
-        <span class="sim-label">Hire</span>
+        <span class="sim-label">Hire in Q2</span>
         <div class="sim-bar-track"><div class="sim-bar-fill"></div></div>
-        <span class="sim-value">+&euro;1,800</span>
+        <span class="sim-value">+&euro;3,100</span>
       </div>
       <div class="sim-row">
-        <span class="sim-label">Restructure</span>
+        <span class="sim-label">Raise prices</span>
         <div class="sim-bar-track"><div class="sim-bar-fill"></div></div>
-        <span class="sim-value">+&euro;400</span>
+        <span class="sim-value">+&euro;1,200</span>
       </div>
       <div class="sim-row">
-        <span class="sim-label">Do Nothing</span>
+        <span class="sim-label">Expand market</span>
         <div class="sim-bar-track"><div class="sim-bar-fill"></div></div>
-        <span class="sim-value">&minus;&euro;2,100</span>
+        <span class="sim-value">&minus;&euro;1,400</span>
       </div>
     </div>
 
     <!-- Description -->
     <p class="description">
-      Your data has a story. <strong>Prisma</strong> reads it,
-      runs 1,000 simulations, and shows you
-      what to do &mdash; before you commit.
+      Drop any spreadsheet &mdash; sales, hiring, costs, forecasts.
+      <strong>Prisma</strong> surfaces hidden risks and opportunities in seconds,
+      then lets you simulate every option. Thousands of scenarios. One clear answer.
     </p>
 
     <!-- Credits -->
