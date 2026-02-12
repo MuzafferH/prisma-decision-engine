@@ -13,26 +13,39 @@
 
 ### Architecture
 ```
-public/index.html          ← Landing page (scrollable, dot grid, 3 sections)
-public/app.html            ← Main app (chat + dashboard)
-public/css/styles.css      ← App styles (warm palette, rose borders)
-public/js/chat.js          ← Chat + API communication
-public/js/dashboard.js     ← Dashboard orchestrator (simulation history, phase routing)
-public/js/chart-renderer.js ← KPI, charts, insights, Futures Cascade rendering
-public/js/visualizations.js ← Plotly charts (tornado, histogram, sliders, causal graph)
-public/js/carlo.js         ← Monte Carlo engine (1000 iterations)
-public/js/nassim.js        ← Taleb classifier + sensitivity analysis (2-phase async)
-public/js/csv-analyzer.js  ← CSV stats extraction (distributions, trends, breakpoints)
-api/chat.js                ← Serverless API (Anthropic proxy, tool_choice forcing)
-api/system-prompt.js       ← System prompt (Prisma's behavior instructions)
+public/index.html            ← Landing page (interactive dot grid, particle buttons, cascade animation)
+public/app.html              ← Main app (chat + dashboard)
+public/css/styles.css        ← App styles (warm palette, rose borders)
+public/js/button-particles.js ← CTA button particle system (PrismaButtonParticles class)
+public/js/chat.js            ← Chat + API communication
+public/js/dashboard.js       ← Dashboard orchestrator (simulation history, phase routing)
+public/js/chart-renderer.js  ← KPI, charts, insights, Futures Cascade rendering
+public/js/visualizations.js  ← Plotly charts (tornado, histogram, sliders, causal graph)
+public/js/carlo.js           ← Monte Carlo engine (1000 iterations)
+public/js/nassim.js          ← Taleb classifier + sensitivity analysis (2-phase async)
+public/js/csv-analyzer.js    ← CSV stats extraction (distributions, trends, breakpoints)
+api/chat.js                  ← Serverless API (Anthropic proxy, tool_choice forcing)
+api/system-prompt.js         ← System prompt (Prisma's behavior instructions)
 ```
 
 ### Design System
-- **Background:** `#F5F0F0` warm off-white + dot grid on landing, noise texture on app
+- **Background:** `#F5F0F0` warm off-white + interactive canvas dot grid on landing, noise texture on app
+- **CTA Buttons:** `#1A1520` near-black with rose particle dots, rose border `rgba(245,192,192,0.18)`
 - **Borders:** rose-tinted `rgba(245,192,192,0.28)`
 - **Fonts:** Geist Pixel Triangle (PRISMA brand), Geist Sans (body), Geist Mono (data)
 - **Accent:** `#2563EB` blue
+- **Rose palette:** base `rgba(245,192,192,0.85)`, deeper `rgba(210,145,150,0.9)`, deepest `rgba(180,120,125,1.0)`
 - **Chat panel:** 25% width, 13px font — dashboard gets 75%
+
+### Landing Page (index.html)
+The landing page has 4 interactive visual systems, all implemented as inline `<script>` blocks (except button-particles.js):
+
+1. **Dot grid canvas** — `#dot-grid-canvas`, fixed full-viewport, 20px spacing, mouse interaction (scale+color shift)
+2. **CTA buttons** — `PrismaButtonParticles` class in `button-particles.js`, hero (14 dots) + footer (18 dots, deferred)
+3. **Cascade section** — 3 canvases ("Your data → 1,000 simulations → Your answer"), looping scatter→histogram→bell animation
+4. **Proof count-up** — `data-count-target` attribute, easeOutExpo counter + orbiting rose dot
+
+**Animation lifecycle:** `window.__prismaAnimations[]` (rAF IDs at fixed indices) + `window.__prismaParticles[]` (button instances). CTA click handler cancels all before fade-out. `prefers-reduced-motion` disables everything.
 
 ### Simulation History (stacking cards)
 Simulations no longer replace each other — they stack as independent cards.
@@ -64,10 +77,12 @@ Simulations no longer replace each other — they stack as independent cards.
 6. **Duplicate event listeners** → NEVER add `addEventListener` inside functions called multiple times. Attach once in `init()` or use event delegation.
 7. **Hardcoded element IDs in rendering functions** → Always pass container as param. `visualizations.js` functions like `renderTornado` now accept optional container — use it.
 8. **Visualizations.renderSliders()** ignores its 2nd arg — it's dead code. Front-page sliders use `renderFrontPageSliders()` instead.
+9. **rAF IDs in global arrays** → NEVER push rAF IDs inside animation loops (grows unboundedly). Use fixed-index slots (`[0]` for dot grid, `[1]` for cascade) or register class instances.
+10. **Canvas DPR scaling** → Always set `canvas.width = displayWidth * dpr` and `ctx.scale(dpr, dpr)`. Missing this = content renders in top-left quadrant only on retina displays.
 
 ### Session Notes
-For detailed architecture, all bug fixes, and design decisions from Feb 12 2026 session:
-→ See `/Users/muzaffer/.claude/projects/-Users-muzaffer/memory/prisma-hackathon.md`
+For detailed architecture, all bug fixes, and design decisions:
+→ See `/Users/muzaffer/.claude/projects/-Users-muzaffer-projects-ClaudeCode-Hackathon/memory/MEMORY.md`
 
 ---
 
@@ -317,26 +332,27 @@ When discovering hidden insights from data:
 ## File Structure
 
 ```
-├── CLAUDE.md                  ← This file (project instructions + Prisma persona)
+├── CLAUDE.md                    ← This file (project instructions + Prisma persona)
 ├── public/
-│   ├── index.html             ← Landing page
-│   ├── app.html               ← Main app (chat panel + answer panel)
-│   ├── css/styles.css         ← All styles
+│   ├── index.html               ← Landing page (interactive dot grid, particle buttons, cascade)
+│   ├── app.html                 ← Main app (chat panel + answer panel)
+│   ├── css/styles.css           ← App styles
 │   ├── js/
-│   │   ├── chat.js            ← Chat panel + API communication
-│   │   ├── dashboard.js       ← Dashboard orchestrator + simulation history
-│   │   ├── chart-renderer.js  ← Data overview charts, Futures Cascade
-│   │   ├── visualizations.js  ← Plotly charts (tornado, histogram, sliders)
-│   │   ├── carlo.js           ← Monte Carlo engine
-│   │   ├── nassim.js          ← Taleb classifier + sensitivity
-│   │   ├── csv-analyzer.js    ← CSV stats extraction
-│   │   └── demo-data.js       ← Demo dataset
-│   ├── fonts/                 ← Geist Pixel Triangle font
-│   └── data/                  ← Sample CSV files
+│   │   ├── button-particles.js  ← CTA button particle system (PrismaButtonParticles)
+│   │   ├── chat.js              ← Chat panel + API communication
+│   │   ├── dashboard.js         ← Dashboard orchestrator + simulation history
+│   │   ├── chart-renderer.js    ← Data overview charts, Futures Cascade
+│   │   ├── visualizations.js    ← Plotly charts (tornado, histogram, sliders)
+│   │   ├── carlo.js             ← Monte Carlo engine
+│   │   ├── nassim.js            ← Taleb classifier + sensitivity
+│   │   ├── csv-analyzer.js      ← CSV stats extraction
+│   │   └── demo-data.js         ← Demo dataset
+│   ├── fonts/                   ← Geist Pixel Triangle font
+│   └── data/                    ← Sample CSV files
 ├── api/
-│   ├── chat.js                ← Vercel serverless API
-│   └── system-prompt.js       ← Claude system prompt
-└── vercel.json                ← Vercel config
+│   ├── chat.js                  ← Vercel serverless API
+│   └── system-prompt.js         ← Claude system prompt
+└── vercel.json                  ← Vercel config
 ```
 
 ## What You Are NOT
