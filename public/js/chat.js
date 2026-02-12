@@ -17,9 +17,8 @@ Chat.init = function() {
   // Get DOM elements
   const sendBtn = document.getElementById('send-btn');
   const chatInput = document.getElementById('chat-input');
-  const fileUpload = document.getElementById('file-upload');
 
-  if (!sendBtn || !chatInput || !fileUpload) {
+  if (!sendBtn || !chatInput) {
     console.error('Chat: Missing required DOM elements');
     return;
   }
@@ -33,8 +32,6 @@ Chat.init = function() {
       this.sendMessage();
     }
   });
-
-  fileUpload.addEventListener('change', (e) => this.handleFileUpload(e));
 
   // Auto-resize textarea
   chatInput.addEventListener('input', () => {
@@ -144,11 +141,15 @@ Chat.sendMessage = async function() {
       // Trim conversation to prevent overflow (keep CSV context + recent messages)
       const trimmedMessages = Chat._trimMessages(this.messages);
 
+      // Capture and reset BEFORE fetch — prevents sticky flag if fetch throws
+      const forceSimulation = !!this._forceSimulation;
+      this._forceSimulation = false;
+
       // Real API call
       const apiResponse = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: trimmedMessages })
+        body: JSON.stringify({ messages: trimmedMessages, forceSimulation })
       });
 
       if (!apiResponse.ok) {
@@ -674,6 +675,7 @@ Chat.triggerSimulation = function(prompt) {
   if (this.isLoading) return;
   // Store the simulation label so we can show it in the teaser
   Dashboard._lastSimulationPrompt = prompt;
+  this._forceSimulation = true;
   const chatInput = document.getElementById('chat-input');
   if (chatInput) chatInput.value = prompt;
   this.sendMessage();

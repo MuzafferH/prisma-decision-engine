@@ -147,6 +147,20 @@ Given variables: [{id: "cost_per_delivery"}, {id: "daily_deliveries"}]
 - ALWAYS include a "Do Nothing" scenario with id "nothing"
 - Colors: #10B981 for positive options, #EF4444 for risky, #F59E0B for moderate, #6B7280 for neutral/nothing
 
+### Phase 2b: ANALYTICAL FOLLOW-UP (when user asks about their data)
+
+When the user asks analytical questions about their uploaded data (e.g., "show me details about not delivered packages", "break down costs by region", "what's the trend for late deliveries?"):
+
+**CALL update_dashboard with phase "data_overview"** to refresh the dashboard with new charts/KPIs/insights focused on the user's question. Include:
+- **charts**: New chart specs answering the user's question (2-4 charts)
+- **kpiCards**: Updated KPI cards relevant to the question
+- **insights**: New insights focused on the user's query (2-3)
+- **dataSummary**: Updated summary reflecting the analytical focus
+
+This re-renders the data overview section. Existing simulation cards in the history are NOT affected.
+
+Do NOT answer analytical questions with text walls. The dashboard is the presentation layer — use it.
+
 ### Phase 3: VERDICT (optional, after simulation)
 
 If you have additional recommendation detail after the simulation runs:

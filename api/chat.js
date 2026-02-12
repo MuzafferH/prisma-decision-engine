@@ -114,7 +114,7 @@ module.exports = async function handler(req, res) {
   ipRequests.set(ip, requests);
 
   // 3. Parse and validate input
-  const { messages } = req.body || {};
+  const { messages, forceSimulation } = req.body || {};
 
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'Messages array required.' });
@@ -370,7 +370,8 @@ module.exports = async function handler(req, res) {
     // Detect simulation-intent and force tool use deterministically
     const lastUserMsg = messages[messages.length - 1];
     const lastMsgText = typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : '';
-    const isSimulationRequest = /^what if\b/i.test(lastMsgText)
+    const isSimulationRequest = forceSimulation === true
+      || /^what if\b/i.test(lastMsgText)
       || /\bsimulate\b/i.test(lastMsgText);
 
     const response = await client.messages.create({

@@ -267,6 +267,15 @@ Dashboard.handleToolCall = function(toolCall) {
     Dashboard._showFormulaWarning();
   }
 
+  // Clear simulation-phase state before merging new data (prevents contamination from previous sims)
+  if (phase === 'simulation') {
+    Dashboard.prismaState.variables = null;
+    Dashboard.prismaState.scenarios = null;
+    Dashboard.prismaState.outcome = null;
+    Dashboard.prismaState.edges = null;
+    Dashboard.prismaState.recommendation = null;
+  }
+
   if (prismaData) {
     Dashboard.mergePrismaData(prismaData);
   }
@@ -360,8 +369,11 @@ Dashboard.activateForPhase = function(phase) {
     }
 
     if (phase === 'simulation') {
+      const prevCount = Dashboard._simCounter;
       Dashboard.runSimulation();
-      Dashboard._createSimCard();
+      if (Dashboard._simCounter > prevCount) {
+        Dashboard._createSimCard();
+      }
       return;
     }
 
@@ -598,7 +610,15 @@ Dashboard.runSimulation = function() {
   const state = Dashboard.prismaState;
 
   if (!state.variables || !state.scenarios || !state.outcome) {
-    console.log('Not enough data for simulation yet');
+    console.warn('Simulation missing required state:', {
+      variables: !!state.variables,
+      scenarios: !!state.scenarios,
+      outcome: !!state.outcome
+    });
+    if (typeof Chat !== 'undefined') {
+      Chat.displayMessage('assistant',
+        'I need more information to run this simulation. Could you rephrase your question or provide more detail about what you want to test?');
+    }
     return;
   }
 
@@ -614,6 +634,11 @@ Dashboard.runSimulation = function() {
     if (allZero) {
       console.warn('[All-Zero Detection] All scenarios produced zero outcomes — formula likely broken');
       Dashboard._showFormulaWarning();
+      if (typeof Chat !== 'undefined') {
+        Chat.displayMessage('assistant',
+          'The simulation produced no meaningful results \u2014 the formula may not match the data. Try rephrasing or ask me to adjust the model.');
+      }
+      return;
     } else {
       Dashboard._hideFormulaWarning();
     }
