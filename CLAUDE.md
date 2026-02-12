@@ -13,14 +13,18 @@
 
 ### Architecture
 ```
-public/index.html     ← Landing page (scrollable, dot grid, 3 sections)
-public/app.html       ← Main app (chat + dashboard)
-public/css/styles.css ← App styles (warm palette, rose borders)
-public/js/chat.js     ← Chat + API communication
-public/js/dashboard.js ← Dashboard rendering
-public/js/chart-renderer.js ← KPI, charts, insights rendering
-api/chat.js           ← Serverless API (Anthropic proxy, tool_choice forcing)
-api/system-prompt.js  ← System prompt (Prisma's behavior instructions)
+public/index.html          ← Landing page (scrollable, dot grid, 3 sections)
+public/app.html            ← Main app (chat + dashboard)
+public/css/styles.css      ← App styles (warm palette, rose borders)
+public/js/chat.js          ← Chat + API communication
+public/js/dashboard.js     ← Dashboard orchestrator (simulation history, phase routing)
+public/js/chart-renderer.js ← KPI, charts, insights, Futures Cascade rendering
+public/js/visualizations.js ← Plotly charts (tornado, histogram, sliders, causal graph)
+public/js/carlo.js         ← Monte Carlo engine (1000 iterations)
+public/js/nassim.js        ← Taleb classifier + sensitivity analysis (2-phase async)
+public/js/csv-analyzer.js  ← CSV stats extraction (distributions, trends, breakpoints)
+api/chat.js                ← Serverless API (Anthropic proxy, tool_choice forcing)
+api/system-prompt.js       ← System prompt (Prisma's behavior instructions)
 ```
 
 ### Design System
@@ -30,12 +34,36 @@ api/system-prompt.js  ← System prompt (Prisma's behavior instructions)
 - **Accent:** `#2563EB` blue
 - **Chat panel:** 25% width, 13px font — dashboard gets 75%
 
+### Simulation History (stacking cards)
+Simulations no longer replace each other — they stack as independent cards.
+
+**Data model:** `Dashboard.simulationHistory[]` — array of snapshot entries (max 10):
+```javascript
+{ id, timestamp, label, carloResults, nassimResults, sensitivityResults,
+  bestPctPositive, expanded, futuresCascadePlayed, recommendation }
+```
+
+**Key patterns:**
+- Cards are created dynamically via `Dashboard._createSimCard()` using safe DOM methods (no innerHTML)
+- Each card has namespaced IDs: `sim-{id}-histogram`, `sim-{id}-stats`, `sim-{id}-tornado`, etc.
+- Event delegation: single click listener on `#simulation-history` container (not per-button)
+- `toggleSimCard(simId)` handles per-card expand/collapse with state in the history entry
+- `_renderSimAnalysis(entry)` renders into card-specific containers
+- `Plotly.purge()` called on collapse and eviction to manage memory
+- Async sensitivity Phase 2 callback captures `simId` in closure → writes to correct entry
+- `Visualizations.renderTornado()` accepts optional 3rd `targetContainer` param (no more ID-swap hack)
+
+**Legacy compat:** Global `Dashboard.carloResults` / `nassimResults` still updated for layer-1/2/3 mode.
+
 ### Known Bug Patterns (avoid these)
 1. **Empty text blocks** in tool_use messages → 400 error. Always use spread: `...(msg ? [{type:'text',text:msg}] : [])`
 2. **Consecutive assistant messages** → 400 error. Combine text + tool_use in ONE message.
 3. **tool_use payload bloat** → compress with `_compressMessage()` before sending to API
 4. **Non-numeric KPI values** → `renderKPICards()` has digit-vs-letter ratio guard
 5. **Simulation text-only responses** → `api/chat.js` forces `tool_choice` for "what if"/"simulate" messages
+6. **Duplicate event listeners** → NEVER add `addEventListener` inside functions called multiple times. Attach once in `init()` or use event delegation.
+7. **Hardcoded element IDs in rendering functions** → Always pass container as param. `visualizations.js` functions like `renderTornado` now accept optional container — use it.
+8. **Visualizations.renderSliders()** ignores its 2nd arg — it's dead code. Front-page sliders use `renderFrontPageSliders()` instead.
 
 ### Session Notes
 For detailed architecture, all bug fixes, and design decisions from Feb 12 2026 session:
@@ -289,18 +317,26 @@ When discovering hidden insights from data:
 ## File Structure
 
 ```
-prisma/
-├── CLAUDE.md               ← This file (Prisma's brain)
-├── skills/prisma.md        ← Claude Code skill definition
-├── engines/
-│   ├── carlo.js            ← Monte Carlo engine
-│   ├── markov.js           ← Markov chain engine
-│   └── nassim.js           ← Taleb classifier + sensitivity
-├── templates/
-│   ├── dashboard.html      ← Base visualization template
-│   └── styles.css          ← Dark mode cinematic theme
-├── data/                   ← Sample datasets
-└── examples/               ← Example outputs
+├── CLAUDE.md                  ← This file (project instructions + Prisma persona)
+├── public/
+│   ├── index.html             ← Landing page
+│   ├── app.html               ← Main app (chat panel + answer panel)
+│   ├── css/styles.css         ← All styles
+│   ├── js/
+│   │   ├── chat.js            ← Chat panel + API communication
+│   │   ├── dashboard.js       ← Dashboard orchestrator + simulation history
+│   │   ├── chart-renderer.js  ← Data overview charts, Futures Cascade
+│   │   ├── visualizations.js  ← Plotly charts (tornado, histogram, sliders)
+│   │   ├── carlo.js           ← Monte Carlo engine
+│   │   ├── nassim.js          ← Taleb classifier + sensitivity
+│   │   ├── csv-analyzer.js    ← CSV stats extraction
+│   │   └── demo-data.js       ← Demo dataset
+│   ├── fonts/                 ← Geist Pixel Triangle font
+│   └── data/                  ← Sample CSV files
+├── api/
+│   ├── chat.js                ← Vercel serverless API
+│   └── system-prompt.js       ← Claude system prompt
+└── vercel.json                ← Vercel config
 ```
 
 ## What You Are NOT
