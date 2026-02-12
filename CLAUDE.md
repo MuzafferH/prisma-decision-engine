@@ -10,21 +10,25 @@
 - `npx serve public` to run locally (static files in `public/`)
 - API functions in `api/` run as Vercel serverless functions
 - Needs `ANTHROPIC_API_KEY` env var for API calls
+- Optional `PRISMA_GATE_PASSWORD` env var to password-protect the app (see API Gate section below)
 
 ### Architecture
 ```
 public/index.html            ← Landing page (interactive dot grid, particle buttons, cascade animation)
-public/app.html              ← Main app (chat + dashboard)
+public/app.html              ← Main app (chat + dashboard + password gate overlay)
 public/css/styles.css        ← App styles (warm palette, rose borders)
 public/js/button-particles.js ← CTA button particle system (PrismaButtonParticles class)
-public/js/chat.js            ← Chat + API communication
+public/js/chat.js            ← Chat + API communication (includes auth headers)
 public/js/dashboard.js       ← Dashboard orchestrator (simulation history, phase routing)
 public/js/chart-renderer.js  ← KPI, charts, insights, Futures Cascade rendering
 public/js/visualizations.js  ← Plotly charts (tornado, histogram, sliders, causal graph)
 public/js/carlo.js           ← Monte Carlo engine (1000 iterations)
 public/js/nassim.js          ← Taleb classifier + sensitivity analysis (2-phase async)
 public/js/csv-analyzer.js    ← CSV stats extraction (distributions, trends, breakpoints)
-api/chat.js                  ← Serverless API (Anthropic proxy, tool_choice forcing)
+api/_auth.js                 ← Shared password gate helper (checkGate)
+api/gate.js                  ← GET: {gated: bool}, POST: validates password {valid: bool}
+api/chat.js                  ← Serverless API (Anthropic proxy, tool_choice forcing, gate-protected)
+api/refine-recommendations.js ← AI-refined slider recommendations (gate-protected)
 api/system-prompt.js         ← System prompt (Prisma's behavior instructions)
 ```
 
@@ -79,6 +83,30 @@ Simulations no longer replace each other — they stack as independent cards.
 8. **Visualizations.renderSliders()** ignores its 2nd arg — it's dead code. Front-page sliders use `renderFrontPageSliders()` instead.
 9. **rAF IDs in global arrays** → NEVER push rAF IDs inside animation loops (grows unboundedly). Use fixed-index slots (`[0]` for dot grid, `[1]` for cascade) or register class instances.
 10. **Canvas DPR scaling** → Always set `canvas.width = displayWidth * dpr` and `ctx.scale(dpr, dpr)`. Missing this = content renders in top-left quadrant only on retina displays.
+
+### API Gate (Password Protection)
+Protects Anthropic API credits. Toggle via single env var — no code changes needed.
+
+**How it works:**
+- `PRISMA_GATE_PASSWORD` env var set → gate ON, password required
+- Env var not set / empty → gate OFF, app open to everyone
+- Landing page (`index.html`) is NEVER gated — judges always see the pitch
+- Server-side enforcement: `api/_auth.js` checks `X-Prisma-Auth` header on every API call
+- Client-side: `app.html` has a password modal overlay (visible by default, hidden when gate OFF or password validated)
+- Password stored in `sessionStorage` (survives reload, clears on tab close)
+- 401 from any API endpoint → `window.PrismaGate.handle401()` re-shows the modal
+
+**Files involved:**
+- `api/_auth.js` — `checkGate(req, res)` helper, imported by chat.js and refine-recommendations.js
+- `api/gate.js` — GET returns `{gated: bool}`, POST with `X-Prisma-Auth` header validates password
+- `public/app.html` — gate overlay div + init script (first children of `<body>`)
+- `public/js/chat.js` — `Chat._getAuthHeaders()` adds auth header to all 3 fetch calls, 401 handling
+- `public/js/dashboard.js` — auth header + 401 handling on `/api/refine-recommendations` fetch
+
+**Toggle commands:**
+- Lock: `printf 'yourpassword' | npx vercel env add PRISMA_GATE_PASSWORD production`
+- Unlock: `npx vercel env rm PRISMA_GATE_PASSWORD production -y`
+- **Important:** Use `printf` (not `<<<`) to avoid trailing newline in env var value
 
 ### Session Notes
 For detailed architecture, all bug fixes, and design decisions:
@@ -350,7 +378,10 @@ When discovering hidden insights from data:
 │   ├── fonts/                   ← Geist Pixel Triangle font
 │   └── data/                    ← Sample CSV files
 ├── api/
-│   ├── chat.js                  ← Vercel serverless API
+│   ├── _auth.js                 ← Password gate helper (underscore = not a route)
+│   ├── gate.js                  ← Gate status + password validation endpoint
+│   ├── chat.js                  ← Vercel serverless API (gate-protected)
+│   ├── refine-recommendations.js ← AI-refined recs (gate-protected)
 │   └── system-prompt.js         ← Claude system prompt
 └── vercel.json                  ← Vercel config
 ```
