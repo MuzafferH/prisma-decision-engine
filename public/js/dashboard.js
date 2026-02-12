@@ -45,9 +45,14 @@ const Dashboard = {
   _csvData: null,                 // Raw parsed CSV rows
   _csvAnalysis: null,             // CSVAnalyzer output
   _dataOverviewRendered: false,   // Prevent double renders
-  _simulationVisible: false,      // Full Analysis expanded
-  _futuresCascadePlayed: false,   // Futures Cascade animation played once
-  _lastSimulationPrompt: null     // Label for current simulation
+  _simulationVisible: false,      // Full Analysis expanded (legacy compat)
+  _futuresCascadePlayed: false,   // Futures Cascade animation played once (legacy compat)
+  _lastSimulationPrompt: null,    // Label for current simulation
+
+  // --- Simulation History (stacking cards) ---
+  simulationHistory: [],          // Array of simulation snapshots
+  _simCounter: 0,                 // Auto-increment ID
+  _maxSimulations: 10             // Memory cap — evict oldest beyond this
 };
 
 /**
@@ -65,10 +70,16 @@ Dashboard.init = function() {
   // Set up progressive disclosure controls
   Dashboard.setupDisclosure();
 
-  // Full Analysis toggle (attach once — not per-simulation)
-  const fullAnalysisBtn = document.getElementById('full-analysis-btn');
-  if (fullAnalysisBtn) {
-    fullAnalysisBtn.addEventListener('click', () => Dashboard.toggleFullAnalysis());
+  // Delegated click handler for simulation history cards
+  const simHistory = document.getElementById('simulation-history');
+  if (simHistory) {
+    simHistory.addEventListener('click', (e) => {
+      const btn = e.target.closest('.sim-full-analysis-btn');
+      if (!btn) return;
+      const card = btn.closest('.sim-card');
+      if (!card) return;
+      Dashboard.toggleSimCard(parseInt(card.dataset.simId, 10));
+    });
   }
 
   // Set up upload drop zone (Prisma 2.0)
@@ -350,14 +361,21 @@ Dashboard.activateForPhase = function(phase) {
 
     if (phase === 'simulation') {
       Dashboard.runSimulation();
-      Dashboard.showSimulationTeaser();
+      Dashboard._createSimCard();
       return;
     }
 
     if (phase === 'verdict') {
-      // Populate recommendation in Full Analysis
-      if (Dashboard.prismaState.recommendation) {
-        Dashboard._renderSimulationRecommendation(Dashboard.prismaState.recommendation);
+      // Populate recommendation in latest sim card
+      const latest = Dashboard.simulationHistory[Dashboard.simulationHistory.length - 1];
+      if (latest && Dashboard.prismaState.recommendation) {
+        latest.recommendation = Dashboard.prismaState.recommendation;
+        const doEl = document.getElementById('sim-' + latest.id + '-rec-do');
+        const watchEl = document.getElementById('sim-' + latest.id + '-rec-watch');
+        const pivotEl = document.getElementById('sim-' + latest.id + '-rec-pivot');
+        if (doEl) doEl.textContent = Dashboard.prismaState.recommendation.action || '';
+        if (watchEl) watchEl.textContent = Dashboard.prismaState.recommendation.watch || '';
+        if (pivotEl) pivotEl.textContent = Dashboard.prismaState.recommendation.trigger || '';
       }
       return;
     }
@@ -614,21 +632,53 @@ Dashboard.runSimulation = function() {
       }
     }
 
+    // Create simulation history entry (before async sensitivity)
+    Dashboard._simCounter++;
+    const simId = Dashboard._simCounter;
+    const simEntry = {
+      id: simId,
+      timestamp: Date.now(),
+      label: Dashboard._lastSimulationPrompt || 'Simulation ' + simId,
+      carloResults: JSON.parse(JSON.stringify(Dashboard.carloResults)),
+      nassimResults: JSON.parse(JSON.stringify(Dashboard.nassimResults)),
+      sensitivityResults: null,
+      bestPctPositive: 0,
+      expanded: false,
+      futuresCascadePlayed: false,
+      recommendation: null
+    };
+
+    // Compute best % positive for teaser
+    const scenarios = state.scenarios || [];
+    for (const s of scenarios) {
+      if (s.id === 'nothing' || s.id === 'do_nothing') continue;
+      const results = Dashboard.carloResults[s.id];
+      if (results && results.summary) {
+        simEntry.bestPctPositive = Math.max(simEntry.bestPctPositive, results.summary.percentPositive);
+      }
+    }
+
     // Full sensitivity analysis (Phase 1 sync + Phase 2 async)
     const baseScenario = state.scenarios.find(s => s.id === 'nothing' || s.id === 'do_nothing') || state.scenarios[0];
     if (baseScenario) {
       console.log('Running full sensitivity analysis...');
+      const capturedSimId = simId; // Capture for async callback
       const phase1Results = Nassim.runFullSensitivity(state, baseScenario.id, 300, (fullResults) => {
-        // Phase 2 callback: update with complete results
+        // Phase 2 callback: scoped to this simulation entry
         Dashboard.fullSensitivityResults = fullResults;
         Dashboard.sensitivityResults = fullResults;
         console.log('Phase 2 sensitivity complete:', fullResults.length, 'variables');
+
+        // Update the specific history entry (not a stale global)
+        const entry = Dashboard.simulationHistory.find(e => e.id === capturedSimId);
+        if (entry) {
+          entry.sensitivityResults = fullResults;
+        }
 
         // Update "more variables" section if not yet rendered with full set
         if (Dashboard._frontSlidersRendered && Dashboard._moreSliderIds === null) {
           const { frontIds, moreIds } = Dashboard.selectFrontPageSliders();
           Dashboard._moreSliderIds = moreIds;
-          // Re-render to include the expanded set
           Visualizations.renderFrontPageSliders(
             fullResults, state, frontIds, moreIds,
             Dashboard._activeBaseline || Dashboard._baselineValues,
@@ -639,8 +689,29 @@ Dashboard.runSimulation = function() {
 
       Dashboard.fullSensitivityResults = phase1Results;
       Dashboard.sensitivityResults = phase1Results;
+      simEntry.sensitivityResults = phase1Results;
       console.log('Phase 1 sensitivity results:', phase1Results);
     }
+
+    // Evict oldest if at memory cap
+    if (Dashboard.simulationHistory.length >= Dashboard._maxSimulations) {
+      const evicted = Dashboard.simulationHistory.shift();
+      const evictedCard = document.querySelector('.sim-card[data-sim-id="' + evicted.id + '"]');
+      if (evictedCard) {
+        // Purge Plotly charts to free memory
+        const histEl = evictedCard.querySelector('[id$="-histogram"]');
+        const tornEl = evictedCard.querySelector('[id$="-tornado"]');
+        if (histEl && typeof Plotly !== 'undefined') {
+          try { Plotly.purge(histEl); } catch(e) { console.warn('[Memory] Eviction purge failed:', e); }
+        }
+        if (tornEl && typeof Plotly !== 'undefined') {
+          try { Plotly.purge(tornEl); } catch(e) { console.warn('[Memory] Eviction purge failed:', e); }
+        }
+        evictedCard.remove();
+      }
+    }
+
+    Dashboard.simulationHistory.push(simEntry);
 
     // Markov (legacy — only runs if Markov engine is loaded)
     if (state.markov && state.markov.enabled && typeof Markov !== 'undefined') {
@@ -1389,151 +1460,233 @@ Dashboard.showDataOverview = function() {
 };
 
 /**
- * Show the simulation teaser (probability badge + shine button) after Monte Carlo.
+ * Create a simulation card and prepend it to the history container.
+ * Each card has its own teaser + expandable full analysis with unique IDs.
  */
-Dashboard.showSimulationTeaser = function() {
-  const simResults = document.getElementById('simulation-results');
-  const teaserScore = document.getElementById('teaser-score');
-  const teaserLabel = document.querySelector('.teaser-label');
-  const fullAnalysisBtn = document.getElementById('full-analysis-btn');
+Dashboard._createSimCard = function() {
+  const historyContainer = document.getElementById('simulation-history');
+  if (!historyContainer || !Dashboard.carloResults) return;
 
-  if (!simResults || !Dashboard.carloResults) return;
+  const entry = Dashboard.simulationHistory[Dashboard.simulationHistory.length - 1];
+  if (!entry) return;
 
-  // Find best non-nothing scenario
-  const state = Dashboard.prismaState;
-  const scenarios = state.scenarios || [];
-  let bestPctPositive = 0;
+  const simId = entry.id;
+  const pct = Math.round(entry.bestPctPositive);
 
-  for (const s of scenarios) {
-    if (s.id === 'nothing' || s.id === 'do_nothing') continue;
-    const results = Dashboard.carloResults[s.id];
-    if (results && results.summary) {
-      bestPctPositive = Math.max(bestPctPositive, results.summary.percentPositive);
-    }
-  }
+  // Build card DOM safely (no innerHTML — label could be user text)
+  const card = document.createElement('div');
+  card.className = 'sim-card';
+  card.dataset.simId = simId;
 
-  // Show teaser with simulation label
-  simResults.style.display = 'block';
-  if (teaserScore) {
-    teaserScore.textContent = Math.round(bestPctPositive) + '% positive outcome';
-  }
-  if (teaserLabel && Dashboard._lastSimulationPrompt) {
-    teaserLabel.textContent = Dashboard._lastSimulationPrompt;
-  }
+  // Teaser section
+  const teaser = document.createElement('div');
+  teaser.className = 'simulation-teaser';
 
-  // Reset button state for new simulation (listener attached once in init)
-  if (fullAnalysisBtn) {
-    fullAnalysisBtn.classList.add('shine');
-    fullAnalysisBtn.classList.remove('expanded');
-    fullAnalysisBtn.textContent = 'Full Analysis';
-  }
+  const teaserContent = document.createElement('div');
+  teaserContent.className = 'teaser-content';
 
-  // Reset cascade for new simulation
-  Dashboard._futuresCascadePlayed = false;
-  Dashboard._simulationVisible = false;
-  const fullAnalysis = document.getElementById('full-analysis');
-  if (fullAnalysis) {
-    fullAnalysis.classList.remove('expanded');
-    fullAnalysis.classList.add('collapsed');
-  }
+  const labelEl = document.createElement('span');
+  labelEl.className = 'teaser-label';
+  labelEl.textContent = entry.label || 'Simulation ' + simId;
+
+  const scoreEl = document.createElement('span');
+  scoreEl.className = 'teaser-score';
+  scoreEl.textContent = pct + '% positive outcome';
+
+  teaserContent.appendChild(labelEl);
+  teaserContent.appendChild(scoreEl);
+
+  const btn = document.createElement('button');
+  btn.className = 'sim-full-analysis-btn full-analysis-btn shine';
+  btn.textContent = 'Full Analysis';
+
+  teaser.appendChild(teaserContent);
+  teaser.appendChild(btn);
+
+  // Full analysis section (collapsed)
+  const analysis = document.createElement('div');
+  analysis.className = 'full-analysis collapsed';
+  analysis.id = 'sim-' + simId + '-analysis';
+
+  const inner = document.createElement('div');
+  inner.className = 'full-analysis-inner';
+
+  const top = document.createElement('div');
+  top.className = 'full-analysis-top';
+
+  const histogramEl = document.createElement('div');
+  histogramEl.className = 'full-analysis-histogram';
+  histogramEl.id = 'sim-' + simId + '-histogram';
+
+  const statsEl = document.createElement('div');
+  statsEl.className = 'full-analysis-stats';
+  statsEl.id = 'sim-' + simId + '-stats';
+
+  top.appendChild(histogramEl);
+  top.appendChild(statsEl);
+
+  const tornadoEl = document.createElement('div');
+  tornadoEl.id = 'sim-' + simId + '-tornado';
+
+  // Recommendation triptych
+  const recTriptych = document.createElement('div');
+  recTriptych.className = 'rec-triptych';
+
+  const recNames = [
+    { cls: 'rec-do', heading: 'Do this', idSuffix: '-rec-do' },
+    { cls: 'rec-watch', heading: 'Watch this', idSuffix: '-rec-watch' },
+    { cls: 'rec-pivot', heading: 'Change if...', idSuffix: '-rec-pivot' }
+  ];
+
+  recNames.forEach(function(r) {
+    const recCard = document.createElement('div');
+    recCard.className = 'rec-card ' + r.cls;
+    const h4 = document.createElement('h4');
+    h4.textContent = r.heading;
+    const p = document.createElement('p');
+    p.id = 'sim-' + simId + r.idSuffix;
+    recCard.appendChild(h4);
+    recCard.appendChild(p);
+    recTriptych.appendChild(recCard);
+  });
+
+  inner.appendChild(top);
+  inner.appendChild(tornadoEl);
+  inner.appendChild(recTriptych);
+  analysis.appendChild(inner);
+
+  card.appendChild(teaser);
+  card.appendChild(analysis);
+
+  // Prepend (newest on top)
+  historyContainer.prepend(card);
 
   // Chat confirmation
   if (typeof Chat !== 'undefined') {
-    const pct = Math.round(bestPctPositive);
-    Chat.displayMessage('assistant', 'Simulation complete \u2014 ' + pct + '% of 1,000 futures come out positive. Click "Full Analysis" on the right to explore the results.');
+    Chat.displayMessage('assistant', 'Simulation complete \u2014 ' + pct + '% of 1,000 futures come out positive. Click \u201cFull Analysis\u201d on the right to explore the results.');
   }
 
-  // Scroll into view
-  simResults.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // Scroll card into view
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
 
 /**
- * Toggle Full Analysis expand/collapse.
+ * Toggle Full Analysis expand/collapse for a specific simulation card.
  */
-Dashboard.toggleFullAnalysis = function() {
-  const fullAnalysis = document.getElementById('full-analysis');
-  const btn = document.getElementById('full-analysis-btn');
-  if (!fullAnalysis) return;
+Dashboard.toggleSimCard = function(simId) {
+  const entry = Dashboard.simulationHistory.find(function(e) { return e.id === simId; });
+  if (!entry) return;
 
-  Dashboard._simulationVisible = !Dashboard._simulationVisible;
+  const analysis = document.getElementById('sim-' + simId + '-analysis');
+  const card = document.querySelector('.sim-card[data-sim-id="' + simId + '"]');
+  const btn = card ? card.querySelector('.sim-full-analysis-btn') : null;
+  if (!analysis) return;
 
-  if (Dashboard._simulationVisible) {
-    fullAnalysis.classList.remove('collapsed');
-    fullAnalysis.classList.add('expanded');
+  entry.expanded = !entry.expanded;
+
+  if (entry.expanded) {
+    analysis.classList.remove('collapsed');
+    analysis.classList.add('expanded');
+    if (card) card.classList.add('analysis-expanded');
     if (btn) {
       btn.classList.remove('shine');
       btn.classList.add('expanded');
       btn.textContent = 'Hide Analysis';
     }
-    // Render full analysis contents
-    Dashboard._renderFullAnalysis();
+    // Render full analysis contents for this card
+    Dashboard._renderSimAnalysis(entry);
   } else {
-    fullAnalysis.classList.remove('expanded');
-    fullAnalysis.classList.add('collapsed');
+    analysis.classList.remove('expanded');
+    analysis.classList.add('collapsed');
+    if (card) card.classList.remove('analysis-expanded');
     if (btn) {
       btn.classList.remove('expanded');
       btn.textContent = 'Full Analysis';
     }
+    // Purge Plotly charts on collapse to free memory
+    var histEl = document.getElementById('sim-' + simId + '-histogram');
+    var tornEl = document.getElementById('sim-' + simId + '-tornado');
+    if (histEl && typeof Plotly !== 'undefined') {
+      try { Plotly.purge(histEl); } catch(e) { console.warn('[Memory] Failed to purge histogram:', e); }
+    }
+    if (tornEl && typeof Plotly !== 'undefined') {
+      try { Plotly.purge(tornEl); } catch(e) { console.warn('[Memory] Failed to purge tornado:', e); }
+    }
   }
 };
 
 /**
- * Render full analysis contents: histogram, stats, tornado, recommendation.
+ * Legacy compat: toggleFullAnalysis delegates to latest sim card.
  */
-Dashboard._renderFullAnalysis = function() {
-  const state = Dashboard.prismaState;
-  if (!Dashboard.carloResults) return;
+Dashboard.toggleFullAnalysis = function() {
+  var latest = Dashboard.simulationHistory[Dashboard.simulationHistory.length - 1];
+  if (latest) Dashboard.toggleSimCard(latest.id);
+};
 
-  // Probability histogram — first time: Futures Cascade animation, then Plotly
-  const histContainer = document.getElementById('probability-histogram');
-  if (histContainer && Dashboard.carloResults) {
-    if (!Dashboard._futuresCascadePlayed && typeof ChartRenderer !== 'undefined' && ChartRenderer.renderFuturesCascade) {
-      Dashboard._futuresCascadePlayed = true;
-      // Cascade will auto-transition to Plotly histogram after 1800ms
-      ChartRenderer.renderFuturesCascade(histContainer, Dashboard.carloResults, state);
+/**
+ * Render full analysis contents for a specific simulation card.
+ * Uses the entry's snapshot data and card-specific container IDs.
+ */
+Dashboard._renderSimAnalysis = function(entry) {
+  const state = Dashboard.prismaState;
+  const carloResults = entry.carloResults;
+  if (!carloResults) return;
+
+  const simId = entry.id;
+
+  // Probability histogram — first time per card: Futures Cascade, then Plotly
+  const histContainer = document.getElementById('sim-' + simId + '-histogram');
+  if (histContainer) {
+    if (!entry.futuresCascadePlayed && typeof ChartRenderer !== 'undefined' && ChartRenderer.renderFuturesCascade) {
+      entry.futuresCascadePlayed = true;
+      ChartRenderer.renderFuturesCascade(histContainer, carloResults, state);
     } else if (typeof Visualizations !== 'undefined' && Visualizations.renderProbabilityHistogram) {
-      Visualizations.renderProbabilityHistogram(Dashboard.carloResults, state, histContainer);
+      Visualizations.renderProbabilityHistogram(carloResults, state, histContainer);
     }
   }
 
   // Stats card
-  Dashboard._renderSimulationStats();
+  const statsContainer = document.getElementById('sim-' + simId + '-stats');
+  if (statsContainer) {
+    Dashboard._renderSimulationStats(statsContainer, carloResults, state);
+  }
 
-  // Sensitivity tornado — render into the Full Analysis container
-  if (Dashboard.sensitivityResults && typeof Visualizations !== 'undefined') {
-    const tornadoContainer = document.getElementById('sensitivity-tornado');
+  // Sensitivity tornado — pass container directly (no more ID swap hack)
+  const sensResults = entry.sensitivityResults || Dashboard.sensitivityResults;
+  if (sensResults && typeof Visualizations !== 'undefined') {
+    const tornadoContainer = document.getElementById('sim-' + simId + '-tornado');
     if (tornadoContainer) {
-      // Temporarily swap the target ID so renderTornado finds it
-      tornadoContainer.id = 'tornado-chart';
-      Visualizations.renderTornado(Dashboard.sensitivityResults, state);
-      tornadoContainer.id = 'sensitivity-tornado';
+      Visualizations.renderTornado(sensResults, state, tornadoContainer);
     }
   }
 
-  // Recommendation
-  if (state.recommendation) {
-    Dashboard._renderSimulationRecommendation(state.recommendation);
-  }
-
-  // Sliders
-  if (typeof Visualizations !== 'undefined' && !Dashboard._slidersRendered) {
-    const sliderContainer = document.getElementById('simulation-sliders');
-    if (sliderContainer && state.variables) {
-      Visualizations.renderSliders(state, sliderContainer);
-      Dashboard._slidersRendered = true;
-    }
+  // Recommendation (if available)
+  if (entry.recommendation || state.recommendation) {
+    const rec = entry.recommendation || state.recommendation;
+    const doEl = document.getElementById('sim-' + simId + '-rec-do');
+    const watchEl = document.getElementById('sim-' + simId + '-rec-watch');
+    const pivotEl = document.getElementById('sim-' + simId + '-rec-pivot');
+    if (doEl) doEl.textContent = rec.action || '';
+    if (watchEl) watchEl.textContent = rec.watch || '';
+    if (pivotEl) pivotEl.textContent = rec.trigger || '';
   }
 };
 
 /**
- * Render simulation stats card in Full Analysis.
+ * Legacy compat wrapper.
  */
-Dashboard._renderSimulationStats = function() {
-  const container = document.getElementById('simulation-stats');
-  if (!container || !Dashboard.carloResults) return;
+Dashboard._renderFullAnalysis = function() {
+  var latest = Dashboard.simulationHistory[Dashboard.simulationHistory.length - 1];
+  if (latest) Dashboard._renderSimAnalysis(latest);
+};
+
+/**
+ * Render simulation stats card into a specific container.
+ */
+Dashboard._renderSimulationStats = function(container, carloResults, state) {
+  if (!container || !carloResults) return;
 
   container.textContent = '';
-  const state = Dashboard.prismaState;
   const scenarios = state.scenarios || [];
   const unit = state.outcome?.unit || '';
 
@@ -1542,7 +1695,7 @@ Dashboard._renderSimulationStats = function() {
   let bestPct = 0;
   for (const s of scenarios) {
     if (s.id === 'nothing' || s.id === 'do_nothing') continue;
-    const r = Dashboard.carloResults[s.id];
+    const r = carloResults[s.id];
     if (r && r.summary && r.summary.percentPositive > bestPct) {
       bestPct = r.summary.percentPositive;
       bestId = s.id;
@@ -1550,7 +1703,7 @@ Dashboard._renderSimulationStats = function() {
   }
   if (!bestId) return;
 
-  const summary = Dashboard.carloResults[bestId].summary;
+  const summary = carloResults[bestId].summary;
   const fmt = (n) => typeof Visualizations !== 'undefined' ? Visualizations._formatNumber(n) : Math.round(n).toLocaleString();
 
   // Expected value (large)
@@ -1588,11 +1741,12 @@ Dashboard._renderSimulationStats = function() {
 
 /**
  * Render recommendation cards in Full Analysis.
+ * Now accepts optional per-card element references.
  */
-Dashboard._renderSimulationRecommendation = function(rec) {
-  const doText = document.getElementById('sim-rec-do-text');
-  const watchText = document.getElementById('sim-rec-watch-text');
-  const pivotText = document.getElementById('sim-rec-pivot-text');
+Dashboard._renderSimulationRecommendation = function(rec, doEl, watchEl, pivotEl) {
+  const doText = doEl || document.getElementById('sim-rec-do-text');
+  const watchText = watchEl || document.getElementById('sim-rec-watch-text');
+  const pivotText = pivotEl || document.getElementById('sim-rec-pivot-text');
 
   if (doText) doText.textContent = rec.action || '';
   if (watchText) watchText.textContent = rec.watch || '';

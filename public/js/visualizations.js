@@ -1241,8 +1241,8 @@ const Visualizations = {
   /**
    * Render tornado chart (Plotly) in Layer 3
    */
-  renderTornado(sensitivityResults, prismaState) {
-    const container = document.getElementById('tornado-chart');
+  renderTornado(sensitivityResults, prismaState, targetContainer) {
+    const container = targetContainer || document.getElementById('tornado-chart');
     if (!container) return;
 
     if (!sensitivityResults || sensitivityResults.length === 0) {

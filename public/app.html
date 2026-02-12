@@ -82,42 +82,8 @@
           <div class="data-table-section" id="data-table-section"></div>
         </div>
 
-        <!-- SIMULATION RESULTS (shown after Monte Carlo runs) -->
-        <div id="simulation-results" style="display:none;">
-          <div class="simulation-teaser" id="simulation-teaser">
-            <div class="teaser-content">
-              <span class="teaser-label">Simulation complete</span>
-              <span class="teaser-score" id="teaser-score"></span>
-            </div>
-            <button class="full-analysis-btn" id="full-analysis-btn">Full Analysis</button>
-          </div>
-
-          <!-- Expandable Full Analysis -->
-          <div class="full-analysis collapsed" id="full-analysis">
-            <div class="full-analysis-inner">
-              <div class="full-analysis-top">
-                <div class="full-analysis-histogram" id="probability-histogram"></div>
-                <div class="full-analysis-stats" id="simulation-stats"></div>
-              </div>
-              <div id="sensitivity-tornado"></div>
-              <div class="rec-triptych" id="simulation-rec-triptych">
-                <div class="rec-card rec-do">
-                  <h4>Do this</h4>
-                  <p id="sim-rec-do-text"></p>
-                </div>
-                <div class="rec-card rec-watch">
-                  <h4>Watch this</h4>
-                  <p id="sim-rec-watch-text"></p>
-                </div>
-                <div class="rec-card rec-pivot">
-                  <h4>Change if...</h4>
-                  <p id="sim-rec-pivot-text"></p>
-                </div>
-              </div>
-              <div class="simulation-sliders" id="simulation-sliders"></div>
-            </div>
-          </div>
-        </div>
+        <!-- SIMULATION HISTORY (cards stack as simulations run) -->
+        <div id="simulation-history"></div>
 
         <!-- LEGACY: Layer 1/2 for fallback mode (hidden in data mode) -->
         <div class="layer-1" id="layer-1">

@@ -1950,8 +1950,22 @@ input[type="range"]::-moz-range-thumb {
 .insight-card.simulating { animation: insightPulse 0.6s ease; }
 
 /* =============================================
-   16. PRISMA 2.0 — SIMULATION TEASER + FULL ANALYSIS
+   16. PRISMA 2.0 — SIMULATION HISTORY + CARDS
    ============================================= */
+
+#simulation-history {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sim-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+  animation: fadeIn 0.5s ease;
+}
 
 .simulation-teaser {
   display: flex;
@@ -1959,10 +1973,11 @@ input[type="range"]::-moz-range-thumb {
   justify-content: space-between;
   padding: 16px 20px;
   background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  margin-bottom: 16px;
-  animation: fadeIn 0.5s ease;
+}
+
+.sim-card:has(.full-analysis.expanded) .simulation-teaser,
+.sim-card.analysis-expanded .simulation-teaser {
+  border-bottom: 1px solid var(--border);
 }
 
 .teaser-content {
