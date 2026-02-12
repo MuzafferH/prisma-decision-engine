@@ -124,10 +124,10 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Messages array cannot be empty.' });
   }
 
-  if (messages.length > 30) {
+  if (messages.length > 80) {
     return res.status(400).json({
       error: 'Conversation too long. Please start a new session.',
-      maxLength: 30
+      maxLength: 80
     });
   }
 
@@ -148,25 +148,19 @@ module.exports = async function handler(req, res) {
     }
 
     // Handle both string and array content formats
-    // Per-type limits: CSV analysis (12K), regular chat (2K), tool results (2K)
+    // Per-type limits: CSV analysis (16K), regular chat (8K), tool results (8K)
     if (typeof msg.content === 'string') {
       const isCSVUpload = msg.content.startsWith('[CSV_UPLOAD]');
-      const maxLen = isCSVUpload ? 12000 : 2000;
+      const maxLen = isCSVUpload ? 16000 : 8000;
       if (msg.content.length > maxLen) {
         return res.status(400).json({
-          error: isCSVUpload ? 'CSV analysis too long. Maximum 12000 characters.' : 'Message too long. Maximum 2000 characters.',
+          error: isCSVUpload ? 'CSV analysis too long. Maximum 16000 characters.' : 'Message too long. Maximum 8000 characters.',
           messageLength: msg.content.length
         });
       }
     } else if (Array.isArray(msg.content)) {
-      // For array content (tool_result format)
-      for (const block of msg.content) {
-        if (block.type === 'text' && block.text && block.text.length > 2000) {
-          return res.status(400).json({
-            error: 'Message text block too long. Maximum 2000 characters.'
-          });
-        }
-      }
+      // For array content (tool_use / tool_result format) — no per-block limit,
+      // total payload is bounded by Anthropic's own context window
     } else {
       return res.status(400).json({
         error: 'Message content must be string or array.'

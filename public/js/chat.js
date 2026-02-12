@@ -319,7 +319,7 @@ Chat.sendFollowUp = async function() {
         });
 
         // Recursively continue (with a limit to prevent infinite loops)
-        if (this.messages.length < 25) {
+        if (this.messages.length < 60) {
           await this.sendFollowUp();
         }
       } else {
@@ -674,31 +674,54 @@ Chat.triggerSimulation = function(prompt) {
 };
 
 /**
+ * Compress a single message, stripping bulky tool_use inputs down to phase name.
+ */
+Chat._compressMessage = function(msg) {
+  if (!Array.isArray(msg.content)) return msg;
+
+  const compressed = msg.content.map(block => {
+    if (block.type === 'tool_use') {
+      // Keep only the phase — drop the massive prismaData payload
+      return {
+        type: 'tool_use',
+        id: block.id,
+        name: block.name,
+        input: { phase: block.input?.phase || 'simulation', prismaData: '[compressed — see prior context]' }
+      };
+    }
+    return block;
+  });
+
+  return { role: msg.role, content: compressed };
+};
+
+/**
  * Trim conversation messages to prevent overflow.
- * Keeps the first message (CSV context) + last 8 messages.
- * Compresses old tool_use blocks to just their phase name.
+ * Keeps the first message (CSV context) + last 12 messages.
+ * Compresses tool_use blocks in older messages to save tokens.
  */
 Chat._trimMessages = function(messages) {
-  if (messages.length <= 10) return messages;
+  // Compress ALL tool_use blocks (even recent ones) to prevent payload bloat
+  const compressed = messages.map(msg => Chat._compressMessage(msg));
 
-  // Keep first message (CSV upload context) and last 8
-  const first = messages[0];
-  const recent = messages.slice(-8);
+  if (compressed.length <= 14) return compressed;
 
-  // Build a summary of what was trimmed
+  // Keep first message (CSV upload context) and last 12
+  const first = compressed[0];
+  const recent = compressed.slice(-12);
+
   const trimmed = [first];
 
-  // Add a bridge message so Claude knows there was prior conversation
+  // Bridge message so Claude knows there was prior conversation
   trimmed.push({
     role: 'user',
-    content: '[Prior conversation trimmed for context. Data overview was generated. User is now asking follow-up questions.]'
+    content: '[Prior conversation trimmed for context. Data overview was generated and dashboard is active. User is asking follow-up or simulation questions.]'
   });
   trimmed.push({
     role: 'assistant',
-    content: 'Understood. I have the data context from the CSV upload. How can I help?'
+    content: 'Understood. I have the data context from the CSV upload and prior analysis. Ready for the next question.'
   });
 
-  // Add recent messages
   trimmed.push(...recent);
 
   return trimmed;
