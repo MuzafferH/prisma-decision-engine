@@ -44,8 +44,8 @@ Chat.init = function() {
     chatInput.style.height = newHeight + 'px';
   });
 
-  // Show initial greeting from Prisma
-  this.displayMessage('assistant', "What decision are you facing? Describe the situation — I'll help you see the consequences before you commit.");
+  // Show initial greeting from Prisma (upload-first flow)
+  this.displayMessage('assistant', "Upload a CSV to start exploring your data. I'll generate dashboards, surface insights, and let you simulate decisions.");
 
   // Focus the textarea
   chatInput.focus();
@@ -481,115 +481,185 @@ Chat.hideTypingIndicator = function() {
   }
 };
 
-// Handle file upload
+// Handle file upload (legacy event handler → delegates to handleCSVUpload)
 Chat.handleFileUpload = async function(event) {
   const files = event.target.files;
   if (!files || files.length === 0) return;
+  await this.handleCSVUpload(files[0]);
+  event.target.value = '';
+};
+
+/**
+ * Handle CSV upload from landing zone or chat paperclip.
+ * Core flow: Parse → Analyze → Store → Send to Claude → Render dashboard
+ * @param {File} file - the CSV file
+ */
+Chat.handleCSVUpload = async function(file) {
+  if (!file) return;
+
+  if (!file.name.endsWith('.csv')) {
+    this.displayMessage('error', 'Please upload a CSV file.');
+    return;
+  }
+
+  const MAX_SIZE = 10 * 1024 * 1024;
+  if (file.size > MAX_SIZE) {
+    this.displayMessage('error', 'File too large. Maximum 10MB.');
+    return;
+  }
 
   const sendBtn = document.getElementById('send-btn');
   if (sendBtn) sendBtn.disabled = true;
 
-  for (const file of files) {
-    // Check file type
-    if (!file.name.endsWith('.csv')) {
-      this.displayMessage('error', `File ${file.name} is not a CSV file. Please upload CSV files only.`);
-      continue;
-    }
+  this.displayMessage('system', `Analyzing ${file.name}...`);
 
-    // Check file size (10MB limit)
-    const MAX_SIZE = 10 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-      this.displayMessage('error', `File ${file.name} is too large. Maximum size is 10MB.`);
-      continue;
-    }
-
-    // Show upload indicator
-    this.displayMessage('system', `Uploading ${file.name}...`);
-
-    // Parse CSV using PapaParse
-    try {
-      const result = await new Promise((resolve, reject) => {
-        Papa.parse(file, {
-          header: true,
-          dynamicTyping: true,
-          skipEmptyLines: true,
-          complete: resolve,
-          error: reject
-        });
-      });
-
-      if (result.errors && result.errors.length > 0) {
-        console.warn('CSV parse warnings:', result.errors);
-      }
-
-      const data = result.data;
-
-      if (data.length === 0) {
-        this.displayMessage('error', `File ${file.name} is empty or could not be parsed.`);
-        continue;
-      }
-
-      // Compute basic statistics for numeric columns
-      const headers = Object.keys(data[0] || {});
-      const stats = {};
-
-      headers.forEach(header => {
-        const values = data.map(row => row[header]).filter(val => typeof val === 'number' && !isNaN(val));
-
-        if (values.length > 0) {
-          const sum = values.reduce((a, b) => a + b, 0);
-          const mean = sum / values.length;
-          const min = Math.min(...values);
-          const max = Math.max(...values);
-          const sorted = [...values].sort((a, b) => a - b);
-          const median = sorted[Math.floor(sorted.length / 2)];
-
-          stats[header] = {
-            count: values.length,
-            mean: mean.toFixed(2),
-            median: median.toFixed(2),
-            min: min.toFixed(2),
-            max: max.toFixed(2)
-          };
-        }
-      });
-
-      // Format stats summary
-      let summary = `I've uploaded ${file.name} (${data.length} rows). Here are the key statistics:\n\n`;
-
-      const statEntries = Object.entries(stats);
-      if (statEntries.length > 0) {
-        statEntries.forEach(([column, columnStats]) => {
-          summary += `${column}:\n`;
-          summary += `  • Count: ${columnStats.count}\n`;
-          summary += `  • Mean: ${columnStats.mean}\n`;
-          summary += `  • Median: ${columnStats.median}\n`;
-          summary += `  • Range: ${columnStats.min} - ${columnStats.max}\n\n`;
-        });
-      } else {
-        summary += 'No numeric columns found for statistical analysis.\n\n';
-      }
-
-      summary += 'What would you like me to analyze from this data?';
-
-      // Add as a user message and send to chat
-      this.messages.push({ role: 'user', content: summary });
-      this.displayMessage('user', summary);
-
-      // Automatically send to get Prisma's response
-      await this.sendMessage();
-
-    } catch (error) {
-      console.error('File parse error:', error);
-      this.displayMessage('error', `Failed to parse ${file.name}. Please ensure it's a valid CSV file.`);
-    }
+  // Show skeleton loading in dashboard immediately
+  if (typeof Dashboard !== 'undefined' && Dashboard.showSkeletonLoading) {
+    Dashboard.showSkeletonLoading();
   }
 
-  // Re-enable send button
-  if (sendBtn) sendBtn.disabled = false;
+  try {
+    // 1. Parse with PapaParse
+    const result = await new Promise((resolve, reject) => {
+      Papa.parse(file, {
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: resolve,
+        error: reject
+      });
+    });
 
-  // Clear the file input
-  event.target.value = '';
+    if (result.errors && result.errors.length > 0) {
+      console.warn('CSV parse warnings:', result.errors);
+    }
+
+    const data = result.data;
+    if (!data || data.length === 0) {
+      this.displayMessage('error', 'File is empty or could not be parsed.');
+      if (sendBtn) sendBtn.disabled = false;
+      return;
+    }
+
+    // 2. Run CSVAnalyzer
+    const analysis = CSVAnalyzer.analyze(data, file.name);
+    const columnTypes = CSVAnalyzer.detectColumnTypes(data);
+
+    // 3. Store raw data in Dashboard for chart rendering
+    if (typeof Dashboard !== 'undefined') {
+      Dashboard._csvData = data;
+      Dashboard._csvAnalysis = analysis;
+    }
+
+    // 4. Build message for Claude
+    const statsText = CSVAnalyzer.formatForChat(analysis);
+    const columns = Object.keys(data[0] || {});
+    const sampleRows = JSON.stringify(data.slice(0, 5));
+
+    const columnTypesText = Object.entries(columnTypes)
+      .map(([col, type]) => `${col}: ${type}`)
+      .join(', ');
+
+    const messageContent = `[CSV_UPLOAD]
+Filename: ${file.name}
+Rows: ${data.length}
+Columns: ${columns.join(', ')}
+Column types: ${columnTypesText}
+
+${statsText}
+
+Sample rows (first 5):
+${sampleRows}
+
+Analyze this data. Generate chart specs, KPI cards, and insights with simulation suggestions.`;
+
+    // 5. Display user message (short version) and send to API
+    this.displayMessage('user', `Uploaded ${file.name} (${data.length.toLocaleString()} rows)`);
+    this.messages.push({ role: 'user', content: messageContent });
+
+    this.showTypingIndicator();
+    this.isLoading = true;
+
+    try {
+      const apiResponse = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: this.messages })
+      });
+
+      this.hideTypingIndicator();
+      this.isLoading = false;
+      if (sendBtn) sendBtn.disabled = false;
+
+      if (!apiResponse.ok) {
+        const errorData = await apiResponse.json().catch(() => ({}));
+        this.displayMessage('error', errorData.error || 'Failed to analyze data.');
+        return;
+      }
+
+      const response = await apiResponse.json();
+
+      // Display Claude's chat message
+      if (response.message) {
+        this.displayMessage('assistant', response.message);
+        this.messages.push({ role: 'assistant', content: response.message });
+      }
+
+      // Handle tool call (data_overview or simulation)
+      if (response.toolCall) {
+        if (this.onDashboardUpdate) {
+          this.onDashboardUpdate(response.toolCall);
+        }
+
+        // Add tool_use + tool_result to conversation history
+        this.messages.push({
+          role: 'assistant',
+          content: [{
+            type: 'tool_use',
+            id: response.toolCall.id || 'tool_1',
+            name: response.toolCall.name || 'update_dashboard',
+            input: response.toolCall.input
+          }]
+        });
+        this.messages.push({
+          role: 'user',
+          content: [{
+            type: 'tool_result',
+            tool_use_id: response.toolCall.id || 'tool_1',
+            content: 'Dashboard updated successfully.'
+          }]
+        });
+
+        // Follow up if needed
+        if (response.stopReason === 'tool_use' && this.messages.length < 25) {
+          await this.sendFollowUp();
+        }
+      }
+
+    } catch (fetchError) {
+      console.error('API call error:', fetchError);
+      this.hideTypingIndicator();
+      this.isLoading = false;
+      if (sendBtn) sendBtn.disabled = false;
+      this.displayMessage('error', 'Failed to reach Prisma. Please try again.');
+    }
+
+  } catch (parseError) {
+    console.error('CSV parse error:', parseError);
+    this.displayMessage('error', 'Failed to parse file. Please ensure it\'s a valid CSV.');
+    if (sendBtn) sendBtn.disabled = false;
+  }
+};
+
+/**
+ * Trigger a Monte Carlo simulation from an insight's "Simulate this" button.
+ * @param {string} prompt - The what-if question
+ */
+Chat.triggerSimulation = function(prompt) {
+  if (this.isLoading) return;
+  const chatInput = document.getElementById('chat-input');
+  if (chatInput) chatInput.value = prompt;
+  this.sendMessage();
 };
 
 // Initialize on page load

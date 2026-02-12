@@ -354,6 +354,34 @@ const Nassim = {
     }
 
     return { context, headline, summaryParts, riskParts, score, color };
+  },
+
+  /**
+   * Get a plain-language classification label from a decision score.
+   * Context-appropriate labels (no Taleb vocabulary).
+   *
+   * @param {number} score - Decision score 0-100
+   * @param {string} [context] - Optional domain context
+   * @returns {Object} { label, confidence, color }
+   */
+  getClassificationLabel(score, context) {
+    let label, color;
+
+    if (score >= 75) {
+      label = 'Strong opportunity';
+      color = '#10B981';
+    } else if (score >= 50) {
+      label = 'Worth considering';
+      color = '#10B981';
+    } else if (score >= 25) {
+      label = 'Risky';
+      color = '#F59E0B';
+    } else {
+      label = 'Avoid';
+      color = '#EF4444';
+    }
+
+    return { label, confidence: score, color };
   }
 };
 

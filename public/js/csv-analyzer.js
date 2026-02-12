@@ -150,9 +150,41 @@ const CSVAnalyzer = {
       text += `\n`;
     }
 
-    text += `What would you like me to analyze from this data?`;
-
     return text;
+  },
+
+  /**
+   * Detect column types by sampling first 50 rows
+   * @param {Array} data - parsed CSV data
+   * @returns {Object} { columnName: 'date'|'numeric'|'categorical'|'text' }
+   */
+  detectColumnTypes(data) {
+    if (!data || data.length === 0) return {};
+
+    const columns = Object.keys(data[0] || {});
+    const types = {};
+    const sampleSize = Math.min(50, data.length);
+    const sample = data.slice(0, sampleSize);
+
+    for (const col of columns) {
+      const values = sample.map(r => r[col]).filter(v => v !== null && v !== undefined && v !== '');
+      if (values.length === 0) { types[col] = 'text'; continue; }
+
+      const numericCount = values.filter(v => typeof v === 'number' || (!isNaN(parseFloat(v)) && isFinite(v))).length;
+      const dateCount = values.filter(v => {
+        if (typeof v === 'number') return false;
+        const str = String(v);
+        return !isNaN(Date.parse(str)) && str.length > 5;
+      }).length;
+      const uniqueCount = new Set(values.map(String)).size;
+
+      if (dateCount > values.length * 0.7) types[col] = 'date';
+      else if (numericCount > values.length * 0.7) types[col] = 'numeric';
+      else if (uniqueCount < Math.max(values.length * 0.3, 10)) types[col] = 'categorical';
+      else types[col] = 'text';
+    }
+
+    return types;
   }
 };
 

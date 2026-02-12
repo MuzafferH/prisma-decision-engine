@@ -148,10 +148,13 @@ module.exports = async function handler(req, res) {
     }
 
     // Handle both string and array content formats
+    // Per-type limits: CSV analysis (12K), regular chat (2K), tool results (2K)
     if (typeof msg.content === 'string') {
-      if (msg.content.length > 2000) {
+      const isCSVUpload = msg.content.startsWith('[CSV_UPLOAD]');
+      const maxLen = isCSVUpload ? 12000 : 2000;
+      if (msg.content.length > maxLen) {
         return res.status(400).json({
-          error: 'Message too long. Maximum 2000 characters.',
+          error: isCSVUpload ? 'CSV analysis too long. Maximum 12000 characters.' : 'Message too long. Maximum 2000 characters.',
           messageLength: msg.content.length
         });
       }
@@ -182,14 +185,14 @@ module.exports = async function handler(req, res) {
     // Tool definition (extracted for reuse in retry)
     const tools = [{
       name: 'update_dashboard',
-      description: 'Update the Prisma dashboard with decision analysis data. Call this tool whenever you have new analysis to show the user — variables, causal relationships, simulation scenarios, or recommendations. The dashboard will render the data as interactive visualizations.',
+      description: 'Update the Prisma dashboard with data analysis, chart specs, insights, simulation scenarios, or recommendations. Call after CSV upload (data_overview), when user asks "what if?" (simulation), or to deliver final verdict.',
       input_schema: {
         type: 'object',
         properties: {
           phase: {
             type: 'string',
-            enum: ['gathering', 'causal_graph', 'simulation', 'verdict', 'tier2_analysis'],
-            description: 'Which phase of analysis this update represents. "gathering" = just chatting (do not call tool), "causal_graph" = show variables and relationships, "simulation" = define scenarios, "verdict" = deliver recommendation, "tier2_analysis" = insights from uploaded data.'
+            enum: ['data_overview', 'simulation', 'verdict'],
+            description: 'data_overview = after CSV upload (charts, KPIs, insights), simulation = Monte Carlo scenarios, verdict = final recommendation'
           },
           prismaData: {
             type: 'object',
@@ -247,19 +250,6 @@ module.exports = async function handler(req, res) {
                   required: ['from', 'to', 'effect', 'strength']
                 }
               },
-              feedbackLoops: {
-                type: 'array',
-                description: 'Identified feedback loops in the causal graph.',
-                items: {
-                  type: 'object',
-                  properties: {
-                    path: { type: 'array', items: { type: 'string' }, description: 'Array of variable ids forming the loop' },
-                    type: { type: 'string', enum: ['positive', 'negative'], description: 'Reinforcing or balancing loop' },
-                    label: { type: 'string', description: 'Human-readable description of the loop' }
-                  },
-                  required: ['path', 'type', 'label']
-                }
-              },
               scenarios: {
                 type: 'array',
                 description: 'Decision options to simulate.',
@@ -314,45 +304,66 @@ module.exports = async function handler(req, res) {
                 },
                 required: ['action', 'watch', 'trigger']
               },
-              discoveries: {
+              charts: {
                 type: 'array',
-                description: 'Insights from data analysis (Tier 2 only).',
+                description: 'Chart specifications for data overview dashboard. Client computes values from raw CSV data.',
                 items: {
                   type: 'object',
                   properties: {
-                    title: { type: 'string', description: 'Short discovery title' },
-                    description: { type: 'string', description: 'Detailed explanation' },
-                    impact: { type: 'string', enum: ['high', 'medium', 'low'], description: 'Impact level' },
-                    type: { type: 'string', enum: ['pattern', 'risk', 'opportunity'], description: 'Discovery type' }
+                    id: { type: 'string', description: 'Unique chart ID' },
+                    type: { type: 'string', enum: ['bar', 'line', 'pie', 'scatter'], description: 'Chart type' },
+                    title: { type: 'string', description: 'Chart title' },
+                    x: { type: 'string', description: 'Column name for x-axis' },
+                    y: { type: 'string', description: 'Column name for y-axis (use "*" for row count)' },
+                    aggregation: { type: 'string', enum: ['count', 'sum', 'avg', 'min', 'max'], description: 'How to aggregate y values' },
+                    groupBy: { type: 'string', description: 'Optional column for grouping/splitting' },
+                    color: { type: 'string', description: 'Primary hex color' },
+                    sortOrder: { type: 'string', enum: ['desc', 'asc'], description: 'Sort order for categorical axes' }
                   },
-                  required: ['title', 'description', 'impact', 'type']
+                  required: ['id', 'type', 'title', 'x', 'y', 'aggregation']
                 }
               },
-              markov: {
-                type: 'object',
-                description: 'Markov chain configuration for state transitions over time.',
-                properties: {
-                  enabled: { type: 'boolean' },
-                  months: { type: 'number', description: 'Number of months to simulate' },
-                  entities: {
-                    type: 'array',
-                    description: 'Entities that transition between states (e.g., drivers, customers)',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        id: { type: 'string' },
-                        label: { type: 'string' },
-                        initialState: { type: 'string' },
-                        states: { type: 'array', items: { type: 'string' } },
-                        transitions: { type: 'object', description: 'Transition probabilities matrix' },
-                        scenarioTransitions: { type: 'object', description: 'Transition matrices per scenario' }
-                      }
-                    }
+              kpiCards: {
+                type: 'array',
+                description: 'Key metric cards for data overview.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    label: { type: 'string', description: 'Metric name' },
+                    value: { type: 'string', description: 'Formatted value string' },
+                    trend: { type: 'string', enum: ['up', 'down', 'flat'], description: 'Trend direction' },
+                    context: { type: 'string', description: 'Comparison or explanation' }
                   },
-                  stateEffects: {
-                    type: 'object',
-                    description: 'How state changes affect variables'
-                  }
+                  required: ['label', 'value']
+                }
+              },
+              insights: {
+                type: 'array',
+                description: 'AI-surfaced insights with optional simulation hooks.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string', description: 'Unique insight ID' },
+                    title: { type: 'string', description: 'One-line headline with specifics' },
+                    description: { type: 'string', description: '1-2 sentence explanation' },
+                    type: { type: 'string', enum: ['pattern', 'risk', 'opportunity', 'anomaly'], description: 'Insight category' },
+                    severity: { type: 'string', enum: ['high', 'medium', 'low'], description: 'Importance level' },
+                    simulatable: { type: 'boolean', description: 'Whether this can be simulated via Monte Carlo' },
+                    simulationPrompt: { type: 'string', description: 'The what-if question for simulation' },
+                    estimatedProbability: { type: 'string', description: 'Rough probability estimate if simulatable' }
+                  },
+                  required: ['id', 'title', 'description', 'type']
+                }
+              },
+              dataSummary: {
+                type: 'object',
+                description: 'Summary of uploaded dataset.',
+                properties: {
+                  filename: { type: 'string' },
+                  rowCount: { type: 'number' },
+                  dateRange: { type: 'string' },
+                  columns: { type: 'array', items: { type: 'string' } },
+                  description: { type: 'string' }
                 }
               }
             }
@@ -364,7 +375,7 @@ module.exports = async function handler(req, res) {
 
     const response = await client.messages.create({
       model: 'claude-opus-4-20250514',
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: messages,
       tools: tools,
@@ -410,7 +421,7 @@ module.exports = async function handler(req, res) {
 
           const retryResponse = await client.messages.create({
             model: 'claude-opus-4-20250514',
-            max_tokens: 2048,
+            max_tokens: 4096,
             system: SYSTEM_PROMPT,
             messages: retryMessages,
             tools: tools,

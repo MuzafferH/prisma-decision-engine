@@ -1525,7 +1525,623 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* =============================================
-   13. UTILITY CLASSES
+   13. PRISMA 2.0 — UPLOAD LANDING
+   ============================================= */
+
+.upload-landing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 48px 32px;
+}
+
+.upload-drop-zone {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  padding: 56px 40px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+  cursor: pointer;
+}
+
+.upload-drop-zone:hover {
+  border-color: rgba(37, 99, 235, 0.3);
+  box-shadow: 0 8px 32px rgba(37, 99, 235, 0.08);
+  transform: translateY(-2px);
+}
+
+.upload-drop-zone.drag-over {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1), 0 12px 40px rgba(37, 99, 235, 0.12);
+  transform: translateY(-4px);
+  background: rgba(37, 99, 235, 0.02);
+}
+
+.upload-icon {
+  margin-bottom: 20px;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.upload-drop-zone:hover .upload-icon { opacity: 0.8; }
+
+.upload-drop-zone h2 {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+
+.upload-drop-zone p {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text3);
+  margin-bottom: 24px;
+}
+
+.btn-demo-data {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-demo-data:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.upload-hint {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 12px;
+}
+
+/* =============================================
+   14. PRISMA 2.0 — DATA OVERVIEW
+   ============================================= */
+
+#data-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeIn 0.5s ease;
+}
+
+/* Summary Card */
+.data-summary-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.summary-filename { font-weight: 600; color: var(--text); }
+.summary-row-count { color: var(--accent); font-weight: 600; }
+.summary-date-range { color: var(--text3); margin-left: auto; }
+.summary-description { width: 100%; font-family: var(--font-sans); font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+/* KPI Strip */
+.kpi-strip {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.kpi-card {
+  flex: 1;
+  min-width: 150px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+  animation: fadeIn 0.5s ease;
+}
+
+.kpi-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.kpi-value {
+  font-family: var(--font-sans);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+
+.kpi-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.kpi-trend {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.kpi-trend.positive { color: #10B981; }
+.kpi-trend.negative { color: #EF4444; }
+.kpi-trend.neutral { color: var(--text3); }
+
+.kpi-context {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 8px;
+  line-height: 1.3;
+}
+
+/* Chart Grid */
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.chart-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  min-height: 280px;
+  transition: box-shadow 0.2s ease;
+}
+
+.chart-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.chart-card-title {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.chart-plot { width: 100%; height: 240px; }
+
+/* Skeleton Loading */
+.skeleton-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(37, 99, 235, 0.03) 35%, rgba(37, 99, 235, 0.06) 50%, rgba(37, 99, 235, 0.03) 65%, transparent 100%);
+  background-size: 200% 100%;
+  animation: recShimmer 2s ease-in-out infinite;
+  border-radius: inherit;
+}
+
+.skeleton-bar {
+  background: var(--bg3);
+  border-radius: 4px;
+  height: 16px;
+  width: 100%;
+}
+
+/* =============================================
+   15. PRISMA 2.0 — INSIGHT CARDS
+   ============================================= */
+
+.insights-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.insight-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-left: 3px solid;
+  border-radius: 10px;
+  padding: 18px 20px;
+  transition: box-shadow 0.2s ease;
+}
+
+.insight-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.insight-card[data-type="pattern"]     { border-left-color: var(--accent); }
+.insight-card[data-type="risk"]        { border-left-color: #EF4444; }
+.insight-card[data-type="opportunity"] { border-left-color: #10B981; }
+.insight-card[data-type="anomaly"]     { border-left-color: #F59E0B; }
+
+.insight-card-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  margin-right: 8px;
+}
+
+.insight-card[data-type="pattern"] .insight-card-badge { background: rgba(37, 99, 235, 0.08); color: var(--accent); }
+.insight-card[data-type="risk"] .insight-card-badge { background: rgba(239, 68, 68, 0.08); color: #EF4444; }
+.insight-card[data-type="opportunity"] .insight-card-badge { background: rgba(16, 185, 129, 0.08); color: #10B981; }
+.insight-card[data-type="anomaly"] .insight-card-badge { background: rgba(245, 158, 11, 0.08); color: #F59E0B; }
+
+.insight-severity {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg2);
+  color: var(--text3);
+}
+
+.insight-severity.high { background: rgba(239, 68, 68, 0.08); color: #EF4444; }
+
+.insight-title {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.insight-description {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.55;
+  margin-bottom: 14px;
+}
+
+.insight-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.simulate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.simulate-btn:hover { background: #1d4ed8; transform: translateY(-1px); }
+.simulate-btn:active { transform: translateY(0); }
+.simulate-btn .arrow { transition: transform 0.2s ease; }
+.simulate-btn:hover .arrow { transform: translateX(3px); }
+
+.probability-teaser {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.probability-teaser .prob-value {
+  font-weight: 700;
+  color: #10B981;
+  font-size: 13px;
+}
+
+@keyframes insightPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.3); }
+  50%  { box-shadow: 0 0 0 8px rgba(37, 99, 235, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+
+.insight-card.simulating { animation: insightPulse 0.6s ease; }
+
+/* =============================================
+   16. PRISMA 2.0 — SIMULATION TEASER + FULL ANALYSIS
+   ============================================= */
+
+.simulation-teaser {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  animation: fadeIn 0.5s ease;
+}
+
+.teaser-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.teaser-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.teaser-score {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 800;
+  color: #10B981;
+  letter-spacing: -0.02em;
+}
+
+/* Full Analysis button with shine */
+.full-analysis-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #2563EB, #7C3AED);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.full-analysis-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+}
+
+.full-analysis-btn.shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 50%, transparent 100%);
+  animation: btnShine 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes btnShine {
+  0%   { left: -100%; }
+  40%  { left: 150%; }
+  100% { left: 150%; }
+}
+
+.full-analysis-btn.expanded {
+  background: var(--text);
+  animation: none;
+}
+
+.full-analysis-btn.expanded::after { display: none; }
+
+/* Full Analysis expandable section */
+.full-analysis {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.4s ease 0.1s;
+}
+
+.full-analysis.expanded {
+  max-height: 3000px;
+  opacity: 1;
+}
+
+.full-analysis-inner {
+  padding: 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.full-analysis-top {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 16px;
+}
+
+.full-analysis-histogram {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  min-height: 260px;
+}
+
+.full-analysis-stats {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.stat-primary {
+  font-family: var(--font-sans);
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+
+.stat-primary.positive { color: #10B981; }
+.stat-primary.negative { color: #EF4444; }
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text2);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.stat-value { font-weight: 600; color: var(--text); }
+
+/* =============================================
+   17. PRISMA 2.0 — DATA TABLE
+   ============================================= */
+
+.data-table-toggle {
+  background: none;
+  border: none;
+  padding: 8px 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text3);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.data-table-toggle:hover { color: var(--accent); }
+
+.data-table-wrap {
+  margin-top: 12px;
+  max-height: 400px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border);
+  color: var(--text2);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 10px;
+  cursor: pointer;
+  position: sticky;
+  top: 0;
+  background: var(--bg2);
+  white-space: nowrap;
+}
+
+.data-table th:hover { background: var(--bg3); }
+
+.data-table td {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.data-table tr:last-child td { border-bottom: none; }
+
+.data-table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.pagination-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pagination-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* =============================================
+   18. UTILITY CLASSES
    ============================================= */
 
 .hidden {
@@ -1533,7 +2149,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* =============================================
-   14. RESPONSIVE
+   19. RESPONSIVE
    ============================================= */
 
 @media (min-width: 1920px) {

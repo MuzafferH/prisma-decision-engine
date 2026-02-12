@@ -38,7 +38,14 @@ const Dashboard = {
   _activeAbort: null,            // AbortController for pending AI refinement
   _refineTimeout: null,          // 2s debounce timer for AI refinement
   _mode: 'demo',                  // 'demo' (template-only) | 'live' (template + AI)
-  _isPrecisionRerun: false         // True during precision re-run (skip AI timer restart)
+  _isPrecisionRerun: false,        // True during precision re-run (skip AI timer restart)
+
+  // --- Prisma 2.0: Data Mode State ---
+  _dataMode: false,               // true when in upload-first data flow
+  _csvData: null,                 // Raw parsed CSV rows
+  _csvAnalysis: null,             // CSVAnalyzer output
+  _dataOverviewRendered: false,   // Prevent double renders
+  _simulationVisible: false       // Full Analysis expanded
 };
 
 /**
@@ -55,6 +62,9 @@ Dashboard.init = function() {
 
   // Set up progressive disclosure controls
   Dashboard.setupDisclosure();
+
+  // Set up upload drop zone (Prisma 2.0)
+  Dashboard.setupUploadZone();
 
   // Detect mode: ?demo=true → demo (template-only), otherwise → live (template + AI)
   const urlParams = new URLSearchParams(window.location.search);
@@ -227,6 +237,11 @@ Dashboard.handleToolCall = function(toolCall) {
 
   console.log(`Dashboard received update: phase=${phase}`);
 
+  // Auto-detect data mode from phase
+  if (phase === 'data_overview') {
+    Dashboard._dataMode = true;
+  }
+
   // Check if server flagged a formula warning (validation failed on both attempts)
   if (toolCall.input._formulaWarning) {
     console.warn('[Dashboard] Server flagged formula warning — showing banner');
@@ -301,7 +316,12 @@ Dashboard.mergePrismaData = function(incoming) {
     if (!state.discoveries) state.discoveries = [];
     state.discoveries = state.discoveries.concat(incoming.discoveries);
   }
-  if (incoming.markov) { state.markov = incoming.markov; }
+
+  // Prisma 2.0: new fields
+  if (incoming.charts) { state.charts = incoming.charts; }
+  if (incoming.kpiCards) { state.kpiCards = incoming.kpiCards; }
+  if (incoming.insights) { state.insights = incoming.insights; }
+  if (incoming.dataSummary) { state.dataSummary = incoming.dataSummary; }
 
   console.log('PRISMA_STATE updated:', JSON.parse(JSON.stringify(state)));
 };
@@ -311,6 +331,31 @@ Dashboard.mergePrismaData = function(incoming) {
  * In v2: all visualization goes to the Answer Panel (Layers 1/2/3)
  */
 Dashboard.activateForPhase = function(phase) {
+  // Prisma 2.0: Data mode phase handling
+  if (Dashboard._dataMode) {
+    console.log('[Dashboard] Data mode — phase:', phase);
+
+    if (phase === 'data_overview') {
+      Dashboard.showDataOverview();
+      return;
+    }
+
+    if (phase === 'simulation') {
+      Dashboard.runSimulation();
+      Dashboard.showSimulationTeaser();
+      return;
+    }
+
+    if (phase === 'verdict') {
+      // Populate recommendation in Full Analysis
+      if (Dashboard.prismaState.recommendation) {
+        Dashboard._renderSimulationRecommendation(Dashboard.prismaState.recommendation);
+      }
+      return;
+    }
+  }
+
+  // Legacy mode: existing Layer 1/2/3 flow
   const phases = ['gathering', 'causal_graph', 'simulation', 'verdict', 'tier2_analysis'];
   const phaseIndex = phases.indexOf(phase);
 
@@ -319,17 +364,14 @@ Dashboard.activateForPhase = function(phase) {
     return;
   }
 
-  // Simulation → run engines + render Layer 1 verdict
   if (phaseIndex >= 2) {
     Dashboard.runSimulation();
   }
 
-  // Verdict → show Layer 1
   if (phaseIndex >= 3) {
     Dashboard.showLayer1();
   }
 
-  // Tier 2 (Discoveries)
   if (phaseIndex >= 4) {
     Dashboard.renderDiscoveries();
     Dashboard.runSimulation();
@@ -592,25 +634,23 @@ Dashboard.runSimulation = function() {
       console.log('Phase 1 sensitivity results:', phase1Results);
     }
 
-    // Markov
-    if (state.markov && state.markov.enabled) {
+    // Markov (legacy — only runs if Markov engine is loaded)
+    if (state.markov && state.markov.enabled && typeof Markov !== 'undefined') {
       Dashboard.runMarkov();
     }
 
     Dashboard._lastSimTimeMs = performance.now() - simStart;
     console.log('Total simulation time: ' + Dashboard._lastSimTimeMs.toFixed(0) + 'ms');
 
-    // Render Layer 1 (always visible when data is ready)
-    Dashboard.showLayer1();
+    // In data mode, don't auto-show Layer 1 — the teaser handles it
+    if (!Dashboard._dataMode) {
+      // Render Layer 1 (always visible when data is ready)
+      Dashboard.showLayer1();
 
-    // If Layer 2 is already open, re-render it
-    if (Dashboard._layer2Open) {
-      Dashboard.renderLayer2();
-    }
-
-    // If Layer 3 is already open, re-render it
-    if (Dashboard._layer3Open) {
-      Dashboard.renderLayer3();
+      // If Layer 2 is already open, re-render it
+      if (Dashboard._layer2Open) {
+        Dashboard.renderLayer2();
+      }
     }
 
   } catch (error) {
@@ -1248,6 +1288,312 @@ Dashboard.loadTestData = function() {
   Dashboard.isDemoMode = true;
   Dashboard.activateForPhase('verdict');
   console.log('Test data loaded successfully');
+};
+
+// ==================== PRISMA 2.0: DATA MODE FUNCTIONS ====================
+
+/**
+ * Set up the upload drop zone on the landing page.
+ */
+Dashboard.setupUploadZone = function() {
+  const dropZone = document.getElementById('upload-drop-zone');
+  const fileInput = document.getElementById('landing-file-upload');
+  const demoBtn = document.getElementById('btn-demo-data');
+
+  if (dropZone && fileInput) {
+    dropZone.addEventListener('click', (e) => {
+      if (e.target === demoBtn || e.target.closest('.btn-demo-data')) return;
+      fileInput.click();
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const files = e.dataTransfer.files;
+      if (files.length > 0 && typeof Chat !== 'undefined') {
+        Dashboard._dataMode = true;
+        Chat.handleCSVUpload(files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files[0] && typeof Chat !== 'undefined') {
+        Dashboard._dataMode = true;
+        Chat.handleCSVUpload(e.target.files[0]);
+        e.target.value = '';
+      }
+    });
+  }
+
+  if (demoBtn) {
+    demoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      Dashboard._dataMode = true;
+      Dashboard.loadDemoCSV();
+    });
+  }
+};
+
+/**
+ * Show skeleton loading state immediately after upload (no dead screen).
+ */
+Dashboard.showSkeletonLoading = function() {
+  if (typeof ChartRenderer !== 'undefined') {
+    ChartRenderer.renderSkeletonLoading();
+  }
+};
+
+/**
+ * Show the data overview (charts, KPIs, insights) after Claude responds.
+ */
+Dashboard.showDataOverview = function() {
+  const dormant = document.getElementById('panel-dormant');
+  const dataOverview = document.getElementById('data-overview');
+
+  if (dormant) dormant.style.display = 'none';
+  if (dataOverview) dataOverview.style.display = 'block';
+
+  if (Dashboard.prismaState && Dashboard._csvData && typeof ChartRenderer !== 'undefined') {
+    ChartRenderer.renderDataOverview(
+      Dashboard.prismaState,
+      Dashboard._csvData,
+      Dashboard._csvAnalysis
+    );
+    Dashboard._dataOverviewRendered = true;
+  }
+};
+
+/**
+ * Show the simulation teaser (probability badge + shine button) after Monte Carlo.
+ */
+Dashboard.showSimulationTeaser = function() {
+  const simResults = document.getElementById('simulation-results');
+  const teaserScore = document.getElementById('teaser-score');
+  const fullAnalysisBtn = document.getElementById('full-analysis-btn');
+
+  if (!simResults || !Dashboard.carloResults) return;
+
+  // Find best non-nothing scenario
+  const state = Dashboard.prismaState;
+  const scenarios = state.scenarios || [];
+  let bestPctPositive = 0;
+
+  for (const s of scenarios) {
+    if (s.id === 'nothing' || s.id === 'do_nothing') continue;
+    const results = Dashboard.carloResults[s.id];
+    if (results && results.summary) {
+      bestPctPositive = Math.max(bestPctPositive, results.summary.percentPositive);
+    }
+  }
+
+  // Show teaser
+  simResults.style.display = 'block';
+  if (teaserScore) {
+    teaserScore.textContent = Math.round(bestPctPositive) + '% positive outcome';
+  }
+
+  // Add shine to button
+  if (fullAnalysisBtn) {
+    fullAnalysisBtn.classList.add('shine');
+    fullAnalysisBtn.addEventListener('click', () => Dashboard.toggleFullAnalysis(), { once: false });
+  }
+
+  // Scroll into view
+  simResults.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+/**
+ * Toggle Full Analysis expand/collapse.
+ */
+Dashboard.toggleFullAnalysis = function() {
+  const fullAnalysis = document.getElementById('full-analysis');
+  const btn = document.getElementById('full-analysis-btn');
+  if (!fullAnalysis) return;
+
+  Dashboard._simulationVisible = !Dashboard._simulationVisible;
+
+  if (Dashboard._simulationVisible) {
+    fullAnalysis.classList.remove('collapsed');
+    fullAnalysis.classList.add('expanded');
+    if (btn) {
+      btn.classList.remove('shine');
+      btn.classList.add('expanded');
+      btn.textContent = 'Hide Analysis';
+    }
+    // Render full analysis contents
+    Dashboard._renderFullAnalysis();
+  } else {
+    fullAnalysis.classList.remove('expanded');
+    fullAnalysis.classList.add('collapsed');
+    if (btn) {
+      btn.classList.remove('expanded');
+      btn.textContent = 'Full Analysis';
+    }
+  }
+};
+
+/**
+ * Render full analysis contents: histogram, stats, tornado, recommendation.
+ */
+Dashboard._renderFullAnalysis = function() {
+  const state = Dashboard.prismaState;
+  if (!Dashboard.carloResults) return;
+
+  // Probability histogram
+  const histContainer = document.getElementById('probability-histogram');
+  if (histContainer && typeof Visualizations !== 'undefined' && Visualizations.renderProbabilityHistogram) {
+    Visualizations.renderProbabilityHistogram(Dashboard.carloResults, state, histContainer);
+  }
+
+  // Stats card
+  Dashboard._renderSimulationStats();
+
+  // Sensitivity tornado — render into the Full Analysis container
+  if (Dashboard.sensitivityResults && typeof Visualizations !== 'undefined') {
+    const tornadoContainer = document.getElementById('sensitivity-tornado');
+    if (tornadoContainer) {
+      // Temporarily swap the target ID so renderTornado finds it
+      tornadoContainer.id = 'tornado-chart';
+      Visualizations.renderTornado(Dashboard.sensitivityResults, state);
+      tornadoContainer.id = 'sensitivity-tornado';
+    }
+  }
+
+  // Recommendation
+  if (state.recommendation) {
+    Dashboard._renderSimulationRecommendation(state.recommendation);
+  }
+
+  // Sliders
+  if (typeof Visualizations !== 'undefined' && !Dashboard._slidersRendered) {
+    const sliderContainer = document.getElementById('simulation-sliders');
+    if (sliderContainer && state.variables) {
+      Visualizations.renderSliders(state, sliderContainer);
+      Dashboard._slidersRendered = true;
+    }
+  }
+};
+
+/**
+ * Render simulation stats card in Full Analysis.
+ */
+Dashboard._renderSimulationStats = function() {
+  const container = document.getElementById('simulation-stats');
+  if (!container || !Dashboard.carloResults) return;
+
+  container.textContent = '';
+  const state = Dashboard.prismaState;
+  const scenarios = state.scenarios || [];
+  const unit = state.outcome?.unit || '';
+
+  // Find best non-nothing scenario
+  let bestId = null;
+  let bestPct = 0;
+  for (const s of scenarios) {
+    if (s.id === 'nothing' || s.id === 'do_nothing') continue;
+    const r = Dashboard.carloResults[s.id];
+    if (r && r.summary && r.summary.percentPositive > bestPct) {
+      bestPct = r.summary.percentPositive;
+      bestId = s.id;
+    }
+  }
+  if (!bestId) return;
+
+  const summary = Dashboard.carloResults[bestId].summary;
+  const fmt = (n) => typeof Visualizations !== 'undefined' ? Visualizations._formatNumber(n) : Math.round(n).toLocaleString();
+
+  // Expected value (large)
+  const primaryLabel = document.createElement('div');
+  primaryLabel.className = 'stat-label';
+  primaryLabel.textContent = 'EXPECTED OUTCOME';
+  container.appendChild(primaryLabel);
+
+  const primaryValue = document.createElement('div');
+  primaryValue.className = 'stat-primary ' + (summary.median >= 0 ? 'positive' : 'negative');
+  primaryValue.textContent = (summary.median >= 0 ? '+' : '') + fmt(summary.median) + ' ' + unit;
+  container.appendChild(primaryValue);
+
+  // Stat rows
+  const stats = [
+    ['Best case (P90)', fmt(summary.p90) + ' ' + unit],
+    ['Worst case (P10)', fmt(summary.p10) + ' ' + unit],
+    ['Positive outcomes', Math.round(summary.percentPositive) + '%'],
+    ['Scenarios tested', scenarios.length.toString()]
+  ];
+
+  stats.forEach(([label, value]) => {
+    const row = document.createElement('div');
+    row.className = 'stat-row';
+    const labelEl = document.createElement('span');
+    labelEl.textContent = label;
+    const valueEl = document.createElement('span');
+    valueEl.className = 'stat-value';
+    valueEl.textContent = value;
+    row.appendChild(labelEl);
+    row.appendChild(valueEl);
+    container.appendChild(row);
+  });
+};
+
+/**
+ * Render recommendation cards in Full Analysis.
+ */
+Dashboard._renderSimulationRecommendation = function(rec) {
+  const doText = document.getElementById('sim-rec-do-text');
+  const watchText = document.getElementById('sim-rec-watch-text');
+  const pivotText = document.getElementById('sim-rec-pivot-text');
+
+  if (doText) doText.textContent = rec.action || '';
+  if (watchText) watchText.textContent = rec.watch || '';
+  if (pivotText) pivotText.textContent = rec.trigger || '';
+};
+
+/**
+ * Load demo CSV file and process it through the data flow.
+ */
+Dashboard.loadDemoCSV = function() {
+  console.log('Loading demo CSV...');
+  Dashboard._dataMode = true;
+
+  // Fetch the demo CSV
+  fetch('/data/delivery_logs_q4.csv')
+    .then(response => {
+      if (!response.ok) throw new Error('Failed to fetch demo CSV');
+      return response.text();
+    })
+    .then(csvText => {
+      // Parse it
+      const result = Papa.parse(csvText, {
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true
+      });
+
+      if (result.data && result.data.length > 0) {
+        // Create a mock File object for handleCSVUpload flow
+        const blob = new Blob([csvText], { type: 'text/csv' });
+        const file = new File([blob], 'delivery_logs_q4.csv', { type: 'text/csv' });
+
+        if (typeof Chat !== 'undefined') {
+          Chat.handleCSVUpload(file);
+        }
+      }
+    })
+    .catch(err => {
+      console.error('Demo CSV load failed:', err);
+      if (typeof Chat !== 'undefined') {
+        Chat.displayMessage('error', 'Failed to load demo data. Please try uploading a CSV file.');
+      }
+    });
 };
 
 // Keyboard shortcut: Ctrl+Shift+D to toggle demo mode

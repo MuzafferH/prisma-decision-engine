@@ -1502,5 +1502,71 @@ const Visualizations = {
     if (score >= 60) return '#10B981';
     if (score >= 40) return '#F59E0B';
     return '#EF4444';
+  },
+
+  /**
+   * Render probability histogram for Full Analysis section (Prisma 2.0).
+   * Shows outcome distribution across all non-nothing scenarios.
+   *
+   * @param {Object} carloResults - Results from Carlo.runCarloAllScenarios()
+   * @param {Object} prismaState - Full PRISMA_DATA state
+   * @param {HTMLElement} container - Target container element
+   */
+  renderProbabilityHistogram(carloResults, prismaState, container) {
+    if (!carloResults || !container) return;
+
+    const scenarios = prismaState.scenarios || [];
+    const unit = prismaState.outcome?.unit || '';
+    const traces = [];
+
+    for (const s of scenarios) {
+      if (s.id === 'nothing' || s.id === 'do_nothing') continue;
+      const results = carloResults[s.id];
+      if (!results || !results.outcomes) continue;
+
+      traces.push({
+        x: results.outcomes,
+        type: 'histogram',
+        name: s.label || s.id,
+        opacity: 0.75,
+        marker: {
+          color: s.color || '#2563EB',
+          line: { color: 'rgba(255,255,255,0.3)', width: 0.5 }
+        },
+        nbinsx: 40
+      });
+    }
+
+    if (traces.length === 0) return;
+
+    const layout = {
+      ...PRISMA_CHART_LAYOUT,
+      barmode: 'overlay',
+      showlegend: traces.length > 1,
+      legend: { font: { size: 10 }, orientation: 'h', y: -0.15 },
+      xaxis: {
+        ...PRISMA_CHART_LAYOUT.xaxis,
+        title: { text: unit, font: { size: 10, color: '#9B9B9B' } }
+      },
+      yaxis: {
+        ...PRISMA_CHART_LAYOUT.yaxis,
+        title: { text: 'Frequency', font: { size: 10, color: '#9B9B9B' } }
+      },
+      margin: { t: 8, b: 48, l: 56, r: 16 },
+      shapes: []
+    };
+
+    // Add vertical line at zero
+    layout.shapes.push({
+      type: 'line',
+      x0: 0, x1: 0, y0: 0, y1: 1,
+      yref: 'paper',
+      line: { color: '#D5D5D0', width: 1, dash: 'dot' }
+    });
+
+    Plotly.newPlot(container, traces, layout, {
+      responsive: true,
+      displayModeBar: false
+    });
   }
 };
