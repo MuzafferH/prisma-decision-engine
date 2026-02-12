@@ -62,10 +62,29 @@
 
       document.getElementById('gate-submit').onclick = function() {
         var pw = document.getElementById('gate-input').value;
+        var btn = document.getElementById('gate-submit');
+        var err = document.getElementById('gate-error');
         if (!pw) return;
-        sessionStorage.setItem('prisma-auth', pw);
-        gate.style.display = 'none';
-        document.getElementById('gate-error').style.display = 'none';
+        btn.disabled = true;
+        btn.textContent = 'Checking...';
+        fetch('/api/gate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Prisma-Auth': pw }
+        }).then(function(r) { return r.json(); }).then(function(data) {
+          btn.disabled = false;
+          btn.textContent = 'Enter';
+          if (data.valid) {
+            sessionStorage.setItem('prisma-auth', pw);
+            gate.style.display = 'none';
+            err.style.display = 'none';
+          } else {
+            err.style.display = 'block';
+          }
+        }).catch(function() {
+          btn.disabled = false;
+          btn.textContent = 'Enter';
+          err.style.display = 'block';
+        });
       };
       document.getElementById('gate-input').addEventListener('keydown', function(e) {
         if (e.key === 'Enter') document.getElementById('gate-submit').click();
