@@ -389,8 +389,8 @@ Dashboard.renderLayer1 = function() {
     Dashboard._originalRecommendation = { ...state.recommendation };
   }
 
-  // Generate verdict
-  const verdict = Nassim.generateVerdict(classification, summary, state);
+  // Generate verdict — include best scenario label for context
+  const verdict = Nassim.generateVerdict(classification, summary, state, Dashboard._bestScenarioLabel);
 
   // Store original verdict on first render
   if (!Dashboard._originalVerdict) {
