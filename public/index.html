@@ -42,31 +42,27 @@
 
     /* ====== RESET ====== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; }
+    html { height: 100%; scroll-behavior: smooth; }
+    body { min-height: 100%; }
 
     body {
       font-family: var(--font-sans);
       background: var(--bg);
       color: var(--text);
       -webkit-font-smoothing: antialiased;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
       position: relative;
     }
 
-    /* ====== NOISE TEXTURE ====== */
-    body::after {
+    /* ====== DOT GRID BACKGROUND (from TRIAGE) ====== */
+    body::before {
       content: '';
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 0;
-      opacity: 0.4;
-      background-image:
-        radial-gradient(circle at 20% 50%, rgba(200, 180, 170, 0.15) 0%, transparent 50%),
-        radial-gradient(circle at 80% 50%, rgba(180, 170, 190, 0.1) 0%, transparent 50%);
+      background-image: radial-gradient(circle, rgba(245, 192, 192, 0.85) 1px, transparent 1px);
+      background-size: 20px 20px;
+      opacity: 0.8;
     }
 
     /* ====== GLOW BEHIND HERO ====== */
@@ -111,10 +107,18 @@
       font-weight: 600;
     }
 
-    /* ====== HERO CONTAINER ====== */
-    .hero {
+    /* ====== HERO SECTION ====== */
+    .hero-section {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       position: relative;
       z-index: 1;
+    }
+
+    .hero {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -200,6 +204,13 @@
       box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
     }
     .cta:active { transform: translateY(0); }
+
+    /* Static CTA (no hero animation, used in scroll sections) */
+    .cta-static {
+      opacity: 1;
+      animation: none;
+      margin-bottom: 0;
+    }
 
     /* ====== ACCENT LINE ====== */
     .accent-line {
@@ -315,14 +326,127 @@
       font-weight: 600;
     }
 
-    /* ====== CREDITS ====== */
+    /* ====== SCROLL SECTIONS ====== */
+    .proof-section {
+      position: relative;
+      z-index: 1;
+      padding: 100px 24px 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .proof-headline {
+      font-family: var(--font-pixel);
+      font-size: clamp(1.4rem, 3vw, 1.75rem);
+      font-weight: 400;
+      color: var(--text);
+      letter-spacing: 0.03em;
+      margin-bottom: 56px;
+    }
+
+    .stat-grid {
+      display: flex;
+      gap: 40px;
+      max-width: 800px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .stat-block {
+      flex: 1;
+      max-width: 220px;
+      text-align: left;
+      padding-left: 16px;
+      border-left: 2px solid var(--rose);
+    }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-family: var(--font-sans);
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.1;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .stat-desc {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--text3);
+      line-height: 1.5;
+    }
+
+    /* ====== FINAL CTA SECTION ====== */
+    .cta-section {
+      position: relative;
+      z-index: 1;
+      padding: 80px 24px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 16px;
+    }
+
+    .cta-headline {
+      font-family: var(--font-pixel);
+      font-size: clamp(1.8rem, 4vw, 2.25rem);
+      font-weight: 400;
+      color: var(--text);
+      letter-spacing: 0.03em;
+    }
+
+    .cta-subhead {
+      font-family: var(--font-sans);
+      font-size: 18px;
+      font-weight: 400;
+      color: var(--text3);
+      margin-bottom: 4px;
+    }
+
+    .cta-body {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--text3);
+      margin-bottom: 12px;
+    }
+
     .credits {
       font-family: var(--font-mono);
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text3);
       letter-spacing: 0.04em;
+      margin-top: 24px;
+    }
+    .credits span {
+      display: block;
+      margin-top: 4px;
+    }
+
+    /* ====== SCROLL REVEAL ====== */
+    .reveal {
       opacity: 0;
-      animation: fadeUp 0.6s var(--ease-out) 1.5s forwards;
+      transform: translateY(24px);
+      transition: opacity 0.4s var(--ease-out), transform 0.4s var(--ease-out);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
     }
 
     /* ====== ANIMATIONS ====== */
@@ -350,6 +474,17 @@
       .mini-sim { max-width: 320px; }
       .sim-label { min-width: 72px; font-size: 11px; }
       .cta { padding: 12px 24px; font-size: 15px; }
+
+      .stat-grid {
+        flex-direction: column;
+        gap: 28px;
+        align-items: center;
+      }
+      .stat-block {
+        max-width: 300px;
+        width: 100%;
+      }
+      .stat-value { font-size: 28px; }
     }
   </style>
 </head>
@@ -363,79 +498,135 @@
     Built with <span class="highlight">Claude</span> &middot; <span class="highlight">Anthropic</span> Hackathon 2026
   </div>
 
-  <!-- Hero -->
-  <div class="hero">
+  <!-- ====== SECTION 1: HERO ====== -->
+  <section class="hero-section">
+    <div class="hero">
 
-    <!-- Prism SVG icon -->
-    <div class="prism-icon">
-      <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="prismGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#2563eb"/>
-            <stop offset="50%" stop-color="#E3B2B3"/>
-            <stop offset="100%" stop-color="#10B981"/>
-          </linearGradient>
-        </defs>
-        <path d="M28 6 L50 46 L6 46 Z" stroke="url(#prismGrad)" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
-      </svg>
+      <!-- Prism SVG icon -->
+      <div class="prism-icon">
+        <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="prismGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#2563eb"/>
+              <stop offset="50%" stop-color="#E3B2B3"/>
+              <stop offset="100%" stop-color="#10B981"/>
+            </linearGradient>
+          </defs>
+          <path d="M28 6 L50 46 L6 46 Z" stroke="url(#prismGrad)" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <!-- Brand -->
+      <h1 class="brand">PRISMA</h1>
+
+      <!-- Tagline -->
+      <p class="tagline">See what happens before it happens.</p>
+
+      <!-- Subtitle -->
+      <p class="subtitle">Upload your data. Prisma finds what you&rsquo;re missing &mdash;<br>then simulates what happens next.</p>
+
+      <!-- CTA -->
+      <a href="app.html" class="cta cta-nav" id="cta-btn">
+        Test Your First Decision
+        <span style="transition: transform 0.2s ease; display: inline-block;">&rarr;</span>
+      </a>
+
+      <!-- Accent line -->
+      <div class="accent-line"></div>
+
+      <!-- Mini simulation bars -->
+      <div class="mini-sim">
+        <div class="sim-row">
+          <span class="sim-label">Hire in Q2</span>
+          <div class="sim-bar-track"><div class="sim-bar-fill"></div></div>
+          <span class="sim-value">+&euro;3,100</span>
+        </div>
+        <div class="sim-row">
+          <span class="sim-label">Raise prices</span>
+          <div class="sim-bar-track"><div class="sim-bar-fill"></div></div>
+          <span class="sim-value">+&euro;1,200</span>
+        </div>
+        <div class="sim-row">
+          <span class="sim-label">Expand market</span>
+          <div class="sim-bar-track"><div class="sim-bar-fill"></div></div>
+          <span class="sim-value">&minus;&euro;1,400</span>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <p class="description">
+        Drop any spreadsheet &mdash; sales, hiring, costs, forecasts.
+        <strong>Prisma</strong> surfaces hidden risks and opportunities in seconds,
+        then lets you simulate every option. Thousands of scenarios. One clear answer.
+      </p>
+
     </div>
+  </section>
 
-    <!-- Brand -->
-    <h1 class="brand">PRISMA</h1>
+  <!-- ====== SECTION 2: THE PROOF ====== -->
+  <section class="proof-section">
+    <h2 class="proof-headline reveal">One upload. Three insights. A thousand scenarios.</h2>
+    <div class="stat-grid">
+      <div class="stat-block reveal">
+        <div class="stat-label">Patterns</div>
+        <div class="stat-value">Found in seconds</div>
+        <div class="stat-desc">What your spreadsheet never showed you</div>
+      </div>
+      <div class="stat-block reveal">
+        <div class="stat-label">Simulations</div>
+        <div class="stat-value">1,000 scenarios</div>
+        <div class="stat-desc">Every path forward, tested at once</div>
+      </div>
+      <div class="stat-block reveal">
+        <div class="stat-label">Risks</div>
+        <div class="stat-value">Flagged automatically</div>
+        <div class="stat-desc">The downside you&rsquo;d discover too late</div>
+      </div>
+    </div>
+  </section>
 
-    <!-- Tagline -->
-    <p class="tagline">See what happens before it happens.</p>
-
-    <!-- Subtitle -->
-    <p class="subtitle">Upload your data. Prisma finds what you&rsquo;re missing &mdash;<br>then simulates what happens next.</p>
-
-    <!-- CTA -->
-    <a href="app.html" class="cta" id="cta-btn">
+  <!-- ====== SECTION 3: FINAL CTA ====== -->
+  <section class="cta-section">
+    <h2 class="cta-headline reveal">Every decision is a bet.</h2>
+    <p class="cta-subhead reveal">See the odds first.</p>
+    <p class="cta-body reveal">Free. No signup. Drop a CSV and see what happens.</p>
+    <a href="app.html" class="cta cta-static cta-nav reveal">
       Test Your First Decision
       <span style="transition: transform 0.2s ease; display: inline-block;">&rarr;</span>
     </a>
-
-    <!-- Accent line -->
-    <div class="accent-line"></div>
-
-    <!-- Mini simulation bars -->
-    <div class="mini-sim">
-      <div class="sim-row">
-        <span class="sim-label">Hire in Q2</span>
-        <div class="sim-bar-track"><div class="sim-bar-fill"></div></div>
-        <span class="sim-value">+&euro;3,100</span>
-      </div>
-      <div class="sim-row">
-        <span class="sim-label">Raise prices</span>
-        <div class="sim-bar-track"><div class="sim-bar-fill"></div></div>
-        <span class="sim-value">+&euro;1,200</span>
-      </div>
-      <div class="sim-row">
-        <span class="sim-label">Expand market</span>
-        <div class="sim-bar-track"><div class="sim-bar-fill"></div></div>
-        <span class="sim-value">&minus;&euro;1,400</span>
-      </div>
+    <div class="credits reveal">
+      Muzaffer Hizel &middot; 2026
+      <span>Built with Claude &middot; Anthropic Hackathon 2026</span>
     </div>
-
-    <!-- Description -->
-    <p class="description">
-      Drop any spreadsheet &mdash; sales, hiring, costs, forecasts.
-      <strong>Prisma</strong> surfaces hidden risks and opportunities in seconds,
-      then lets you simulate every option. Thousands of scenarios. One clear answer.
-    </p>
-
-    <!-- Credits -->
-    <p class="credits">Muzaffer Hizel &middot; 2026</p>
-
-  </div>
+  </section>
 
   <script>
-    // CTA: fade out then navigate
-    document.getElementById('cta-btn').addEventListener('click', function(e) {
-      e.preventDefault();
-      const href = this.getAttribute('href');
-      document.body.classList.add('fade-out');
-      setTimeout(() => { window.location.href = href; }, 400);
+    // Scroll reveal via IntersectionObserver
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.reveal').forEach((el, i) => {
+      // Stagger siblings within same parent
+      const siblings = Array.from(el.parentElement.querySelectorAll('.reveal'));
+      const idx = siblings.indexOf(el);
+      el.style.transitionDelay = (idx * 0.08) + 's';
+      observer.observe(el);
+    });
+
+    // CTA: fade out then navigate (both hero and footer CTA)
+    document.querySelectorAll('.cta-nav').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const href = this.getAttribute('href');
+        document.body.classList.add('fade-out');
+        setTimeout(() => { window.location.href = href; }, 400);
+      });
     });
   </script>
 
