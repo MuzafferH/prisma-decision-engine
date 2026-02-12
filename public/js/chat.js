@@ -12,6 +12,14 @@ const Chat = {
   MIN_REQUEST_INTERVAL: 3000 // 3 seconds between requests
 };
 
+// Auth header helper — includes password from sessionStorage when gate is active
+Chat._getAuthHeaders = function() {
+  var headers = { 'Content-Type': 'application/json' };
+  var auth = sessionStorage.getItem('prisma-auth');
+  if (auth) headers['X-Prisma-Auth'] = auth;
+  return headers;
+};
+
 // Initialize chat interface
 Chat.init = function() {
   // Get DOM elements
@@ -148,9 +156,17 @@ Chat.sendMessage = async function() {
       // Real API call
       const apiResponse = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: Chat._getAuthHeaders(),
         body: JSON.stringify({ messages: trimmedMessages, forceSimulation })
       });
+
+      if (apiResponse.status === 401) {
+        if (window.PrismaGate) window.PrismaGate.handle401();
+        this.hideTypingIndicator();
+        this.isLoading = false;
+        sendBtn.disabled = false;
+        return;
+      }
 
       if (!apiResponse.ok) {
         const errorData = await apiResponse.json().catch(() => ({}));
@@ -267,9 +283,17 @@ Chat.sendFollowUp = async function() {
       const trimmedMessages = Chat._trimMessages(this.messages);
       const apiResponse = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: Chat._getAuthHeaders(),
         body: JSON.stringify({ messages: trimmedMessages })
       });
+
+      if (apiResponse.status === 401) {
+        if (window.PrismaGate) window.PrismaGate.handle401();
+        this.hideTypingIndicator();
+        this.isLoading = false;
+        sendBtn.disabled = false;
+        return;
+      }
 
       if (!apiResponse.ok) {
         const errorData = await apiResponse.json().catch(() => ({}));
@@ -594,13 +618,18 @@ Analyze this data. Generate chart specs, KPI cards, and insights with simulation
       const trimmedMessages = Chat._trimMessages(this.messages);
       const apiResponse = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: Chat._getAuthHeaders(),
         body: JSON.stringify({ messages: trimmedMessages })
       });
 
       this.hideTypingIndicator();
       this.isLoading = false;
       if (sendBtn) sendBtn.disabled = false;
+
+      if (apiResponse.status === 401) {
+        if (window.PrismaGate) window.PrismaGate.handle401();
+        return;
+      }
 
       if (!apiResponse.ok) {
         const errorData = await apiResponse.json().catch(() => ({}));

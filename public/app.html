@@ -17,6 +17,62 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 </head>
 <body>
+  <!-- Password gate overlay (visible by default — JS hides when gate is OFF or password stored) -->
+  <div id="prisma-gate" style="position:fixed;inset:0;z-index:99999;background:#F5F0F0;display:flex;align-items:center;justify-content:center;flex-direction:column;font-family:'Geist',system-ui,sans-serif;">
+    <div style="text-align:center;max-width:360px;padding:0 24px;">
+      <div style="font-family:'Geist Pixel Triangle',monospace;font-size:2.4rem;letter-spacing:0.15em;color:#1A1520;margin-bottom:8px;">PRISMA</div>
+      <p style="color:#6b6b6b;font-size:0.95rem;margin-bottom:28px;">This instance is password-protected.</p>
+      <input id="gate-input" type="password" placeholder="Enter password"
+        style="width:100%;box-sizing:border-box;padding:12px 16px;font-size:1rem;border:1.5px solid rgba(245,192,192,0.4);border-radius:8px;background:#fff;outline:none;font-family:'Geist',system-ui,sans-serif;margin-bottom:12px;"
+        autocomplete="off">
+      <button id="gate-submit"
+        style="width:100%;padding:12px 0;font-size:1rem;font-weight:600;color:#fff;background:#1A1520;border:1.5px solid rgba(245,192,192,0.18);border-radius:8px;cursor:pointer;font-family:'Geist',system-ui,sans-serif;transition:opacity 0.15s;">
+        Enter
+      </button>
+      <p id="gate-error" style="display:none;color:#c0392b;font-size:0.85rem;margin-top:12px;">Wrong password. Please try again.</p>
+    </div>
+  </div>
+  <script>
+    (function() {
+      var gate = document.getElementById('prisma-gate');
+      var stored = sessionStorage.getItem('prisma-auth');
+
+      // Global 401 handler for chat.js and dashboard.js
+      window.PrismaGate = {
+        handle401: function() {
+          sessionStorage.removeItem('prisma-auth');
+          var g = document.getElementById('prisma-gate');
+          if (g) {
+            g.style.display = 'flex';
+            var err = document.getElementById('gate-error');
+            if (err) err.style.display = 'block';
+          }
+        }
+      };
+
+      fetch('/api/gate').then(function(r) { return r.json(); }).then(function(data) {
+        if (!data.gated) {
+          gate.style.display = 'none';
+        } else if (stored) {
+          gate.style.display = 'none';
+        }
+      }).catch(function() {
+        gate.style.display = 'none';
+      });
+
+      document.getElementById('gate-submit').onclick = function() {
+        var pw = document.getElementById('gate-input').value;
+        if (!pw) return;
+        sessionStorage.setItem('prisma-auth', pw);
+        gate.style.display = 'none';
+        document.getElementById('gate-error').style.display = 'none';
+      };
+      document.getElementById('gate-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') document.getElementById('gate-submit').click();
+      });
+    })();
+  </script>
+
   <div class="prisma-app pre-upload">
     <!-- HEADER -->
     <header class="prisma-header">

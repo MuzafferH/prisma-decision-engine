@@ -2,6 +2,7 @@
 // Vercel serverless function for AI-refined slider recommendations
 
 const Anthropic = require('@anthropic-ai/sdk');
+const { checkGate } = require('./_auth');
 
 // Rate limiting: 20/min per IP (higher than chat since these are small, fast calls)
 const ipRequests = new Map();
@@ -23,6 +24,9 @@ module.exports = async function handler(req, res) {
   }
   requests.push(now);
   ipRequests.set(ip, requests);
+
+  // 2b. Password gate
+  if (!checkGate(req, res)) return;
 
   // 3. Parse and validate input
   const body = req.body || {};

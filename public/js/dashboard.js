@@ -1215,13 +1215,21 @@ Dashboard._fetchAIRefinement = function() {
     median: Dashboard.carloResults?.[bestId]?.summary?.median || 0
   };
 
+  var refineHeaders = { 'Content-Type': 'application/json' };
+  var refineAuth = sessionStorage.getItem('prisma-auth');
+  if (refineAuth) refineHeaders['X-Prisma-Auth'] = refineAuth;
+
   fetch('/api/refine-recommendations', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: refineHeaders,
     body: JSON.stringify(payload),
     signal: Dashboard._activeAbort.signal
   })
     .then(res => {
+      if (res.status === 401) {
+        if (window.PrismaGate) window.PrismaGate.handle401();
+        throw new Error('Unauthorized');
+      }
       if (!res.ok) throw new Error('API error');
       return res.json();
     })

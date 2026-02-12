@@ -3,6 +3,7 @@
 
 const Anthropic = require('@anthropic-ai/sdk');
 const { SYSTEM_PROMPT } = require('./system-prompt');
+const { checkGate } = require('./_auth');
 
 // --- Formula Validation Helpers ---
 
@@ -112,6 +113,9 @@ module.exports = async function handler(req, res) {
   }
   requests.push(now);
   ipRequests.set(ip, requests);
+
+  // 2b. Password gate
+  if (!checkGate(req, res)) return;
 
   // 3. Parse and validate input
   const { messages, forceSimulation } = req.body || {};
