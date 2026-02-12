@@ -266,21 +266,13 @@ const Nassim = {
     const unit = prismaState.outcome?.unit || '';
     const cls = classification.classification;
 
-    // Headline from score — include scenario name when provided
+    // Headline — honest about the situation, scenario name only when it's actually good
     let headline;
-    if (bestScenarioLabel) {
-      if (score >= 80) headline = `${bestScenarioLabel} looks strongest`;
-      else if (score >= 60) headline = `${bestScenarioLabel} is a solid bet`;
-      else if (score >= 40) headline = `${bestScenarioLabel} could go either way`;
-      else if (score >= 20) headline = `${bestScenarioLabel} needs caution`;
-      else headline = `${bestScenarioLabel} looks risky`;
-    } else {
-      if (score >= 80) headline = 'This looks strong';
-      else if (score >= 60) headline = 'Solid bet with manageable downside';
-      else if (score >= 40) headline = 'This could go either way';
-      else if (score >= 20) headline = 'Proceed with caution';
-      else headline = 'This is risky';
-    }
+    if (score >= 80) headline = bestScenarioLabel ? `${bestScenarioLabel} looks strong` : 'This looks strong';
+    else if (score >= 60) headline = bestScenarioLabel ? `${bestScenarioLabel} is a solid bet` : 'Solid bet with manageable downside';
+    else if (score >= 40) headline = 'This could go either way';
+    else if (score >= 20) headline = 'The odds aren\'t great';
+    else headline = 'All options carry significant risk';
 
     // Color from score
     let color;
@@ -348,11 +340,18 @@ const Nassim = {
       ];
     }
 
-    // Context line: decision title + best scenario for orientation
+    // Context line: adapts language based on score
     const decisionTitle = prismaState.meta?.title || '';
-    const context = bestScenarioLabel
-      ? `${decisionTitle} — best option: ${bestScenarioLabel}`
-      : decisionTitle;
+    let context;
+    if (!bestScenarioLabel) {
+      context = decisionTitle;
+    } else if (score >= 60) {
+      context = `${decisionTitle} — best option: ${bestScenarioLabel}`;
+    } else if (score >= 30) {
+      context = `${decisionTitle} — closest option: ${bestScenarioLabel}`;
+    } else {
+      context = `${decisionTitle} — all options are risky, ${bestScenarioLabel} scores highest`;
+    }
 
     return { context, headline, summaryParts, riskParts, score, color };
   }
