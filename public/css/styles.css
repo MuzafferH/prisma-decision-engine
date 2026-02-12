@@ -1978,6 +1978,18 @@ input[type="range"]::-moz-range-thumb {
 
 .full-analysis-btn.expanded::after { display: none; }
 
+/* Futures Cascade canvas overlay */
+.histogram-canvas-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  transition: opacity 0.3s ease;
+}
+
 /* Full Analysis expandable section */
 .full-analysis {
   max-height: 0;

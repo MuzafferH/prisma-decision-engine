@@ -696,5 +696,186 @@ const ChartRenderer = {
         pagination.appendChild(nextBtn);
       }
     }
+  },
+
+  // ==================== FUTURES CASCADE (Signature Moment) ====================
+
+  /**
+   * "Futures Cascade" — 200 dots rain into histogram bins, then fade to Plotly bars.
+   * This is the visual moment judges remember.
+   *
+   * @param {HTMLElement} container - The histogram container element
+   * @param {Object} carloResults - Carlo results for all scenarios
+   * @param {Object} prismaState - Full state (for scenario colors, outcome unit)
+   */
+  renderFuturesCascade(container, carloResults, prismaState) {
+    if (!container || !carloResults) return;
+
+    const scenarios = prismaState.scenarios || [];
+
+    // Collect outcomes from the best non-nothing scenario
+    let allOutcomes = [];
+    for (const s of scenarios) {
+      if (s.id === 'nothing' || s.id === 'do_nothing') continue;
+      const r = carloResults[s.id];
+      if (r && r.outcomes) {
+        allOutcomes = r.outcomes;
+        break;
+      }
+    }
+    if (allOutcomes.length === 0) return;
+
+    // Setup dimensions
+    const rect = container.getBoundingClientRect();
+    const width = rect.width || 500;
+    const height = 260;
+
+    // Create canvas overlay
+    const canvas = document.createElement('canvas');
+    canvas.className = 'histogram-canvas-overlay';
+    canvas.width = width * 2;
+    canvas.height = height * 2;
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.zIndex = '2';
+    canvas.style.pointerEvents = 'none';
+
+    container.style.position = 'relative';
+    container.appendChild(canvas);
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+
+    // Bin the outcomes
+    const NUM_BINS = 30;
+    const minVal = Math.min(...allOutcomes);
+    const maxVal = Math.max(...allOutcomes);
+    const range = maxVal - minVal || 1;
+    const binWidth = range / NUM_BINS;
+
+    const bins = new Array(NUM_BINS).fill(0);
+    for (const val of allOutcomes) {
+      const binIdx = Math.min(NUM_BINS - 1, Math.floor((val - minVal) / binWidth));
+      bins[binIdx]++;
+    }
+    const maxBinCount = Math.max(...bins);
+
+    // Sample 200 outcomes and shuffle
+    const NUM_DOTS = 200;
+    const sampled = [];
+    for (let i = 0; i < NUM_DOTS; i++) {
+      const idx = Math.floor((i / NUM_DOTS) * allOutcomes.length);
+      sampled.push(allOutcomes[idx]);
+    }
+    for (let i = sampled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = sampled[i]; sampled[i] = sampled[j]; sampled[j] = tmp;
+    }
+
+    // Chart area (matching Plotly margins)
+    const cL = 48, cR = width - 16, cT = 8, cB = height - 36;
+    const cW = cR - cL, cH = cB - cT;
+
+    // Create dot particles
+    const binDotCounts = new Array(NUM_BINS).fill(0);
+    const dots = sampled.map((val, i) => {
+      const normalized = (val - minVal) / range;
+      const binIdx = Math.min(NUM_BINS - 1, Math.floor(normalized * NUM_BINS));
+      binDotCounts[binIdx]++;
+
+      const x = cL + normalized * cW + (Math.random() - 0.5) * (cW / NUM_BINS * 0.6);
+      const binH = (bins[binIdx] / maxBinCount) * cH;
+      const dotsExpected = Math.ceil(NUM_DOTS * (bins[binIdx] / allOutcomes.length));
+      const stackPos = dotsExpected > 0 ? (binDotCounts[binIdx] - 1) / dotsExpected : 0;
+      const targetY = Math.max(cT, Math.min(cB - 3, cB - stackPos * binH));
+
+      // Color: red (negative) -> amber (zero) -> green (positive)
+      let r, g, b;
+      if (val < 0) {
+        const t = Math.min(1, Math.abs(val) / (Math.abs(minVal) || 1));
+        r = Math.round(245 + (239 - 245) * t);
+        g = Math.round(158 + (68 - 158) * t);
+        b = Math.round(11 + (68 - 11) * t);
+      } else {
+        const t = Math.min(1, val / (maxVal || 1));
+        r = Math.round(245 + (16 - 245) * t);
+        g = Math.round(158 + (185 - 158) * t);
+        b = Math.round(11 + (129 - 11) * t);
+      }
+
+      return {
+        x, y: -10 - Math.random() * 80,
+        targetY, vy: 0, settled: false,
+        color: `rgb(${r},${g},${b})`,
+        glowColor: `rgba(${r},${g},${b},0.2)`,
+        radius: 2.5, binIdx,
+        wobblePhase: Math.random() * Math.PI * 2,
+        delay: i * 4
+      };
+    });
+
+    // Animation
+    const startTime = performance.now();
+    const GRAVITY = 0.25;
+    const DAMPING = 0.6;
+    const CASCADE_DURATION = 1400;
+    const FADE_DURATION = 400;
+    let frameId;
+
+    const animate = (now) => {
+      const elapsed = now - startTime;
+      ctx.clearRect(0, 0, width, height);
+
+      for (const d of dots) {
+        if (elapsed < d.delay) continue;
+
+        if (!d.settled) {
+          d.vy += GRAVITY;
+          d.y += d.vy;
+          d.x += Math.sin((elapsed - d.delay) * 0.008 + d.wobblePhase) * 0.4;
+
+          if (d.y >= d.targetY) {
+            d.y = d.targetY;
+            if (Math.abs(d.vy) < 1) { d.settled = true; }
+            else { d.vy = -d.vy * DAMPING; }
+          }
+        }
+
+        // Draw dot
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.radius, 0, Math.PI * 2);
+        ctx.fillStyle = d.color;
+        ctx.fill();
+
+        // Glow
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.radius + 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = d.glowColor;
+        ctx.fill();
+      }
+
+      // Fade out and transition to Plotly
+      if (elapsed > CASCADE_DURATION) {
+        const fadeProgress = Math.min(1, (elapsed - CASCADE_DURATION) / FADE_DURATION);
+        canvas.style.opacity = String(1 - fadeProgress);
+
+        if (fadeProgress >= 1) {
+          cancelAnimationFrame(frameId);
+          canvas.remove();
+          // Render the real Plotly histogram
+          if (typeof Visualizations !== 'undefined' && Visualizations.renderProbabilityHistogram) {
+            Visualizations.renderProbabilityHistogram(carloResults, prismaState, container);
+          }
+          return;
+        }
+      }
+
+      frameId = requestAnimationFrame(animate);
+    };
+
+    frameId = requestAnimationFrame(animate);
   }
 };

@@ -45,7 +45,8 @@ const Dashboard = {
   _csvData: null,                 // Raw parsed CSV rows
   _csvAnalysis: null,             // CSVAnalyzer output
   _dataOverviewRendered: false,   // Prevent double renders
-  _simulationVisible: false       // Full Analysis expanded
+  _simulationVisible: false,      // Full Analysis expanded
+  _futuresCascadePlayed: false    // Futures Cascade animation played once
 };
 
 /**
@@ -1448,10 +1449,16 @@ Dashboard._renderFullAnalysis = function() {
   const state = Dashboard.prismaState;
   if (!Dashboard.carloResults) return;
 
-  // Probability histogram
+  // Probability histogram — first time: Futures Cascade animation, then Plotly
   const histContainer = document.getElementById('probability-histogram');
-  if (histContainer && typeof Visualizations !== 'undefined' && Visualizations.renderProbabilityHistogram) {
-    Visualizations.renderProbabilityHistogram(Dashboard.carloResults, state, histContainer);
+  if (histContainer && Dashboard.carloResults) {
+    if (!Dashboard._futuresCascadePlayed && typeof ChartRenderer !== 'undefined' && ChartRenderer.renderFuturesCascade) {
+      Dashboard._futuresCascadePlayed = true;
+      // Cascade will auto-transition to Plotly histogram after 1800ms
+      ChartRenderer.renderFuturesCascade(histContainer, Dashboard.carloResults, state);
+    } else if (typeof Visualizations !== 'undefined' && Visualizations.renderProbabilityHistogram) {
+      Visualizations.renderProbabilityHistogram(Dashboard.carloResults, state, histContainer);
+    }
   }
 
   // Stats card
