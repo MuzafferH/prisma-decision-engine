@@ -43,6 +43,8 @@ Do NOT ask follow-up questions first. Analyze the stats and generate everything 
 
    Pick KPIs that are actionable and highlight the most interesting patterns. Not just raw counts — ratios, averages, and trend metrics are more useful.
 
+   **CRITICAL: The "value" field MUST be a formatted number (e.g., "5,023", "18.5 min", "$3.12", "72%"). NEVER use placeholder text like "Calculate from status" or "TBD". If you cannot compute a metric, OMIT that KPI card entirely rather than using a placeholder.**
+
 3. **charts** (4-6) — Chart specifications
    Each chart has:
    - id: unique string (e.g., "chart_1")
@@ -92,7 +94,9 @@ Do NOT ask follow-up questions first. Analyze the stats and generate everything 
 
 When the user clicks "Simulate this" on an insight card, or types a what-if question in chat:
 
-**CALL update_dashboard with phase "simulation"** containing:
+**You MUST call update_dashboard with phase "simulation".** Do NOT answer simulation questions with text only — ALWAYS use the tool. The user expects the Full Analysis panel on the right side. A text-only response means the simulation feature appears broken.
+
+**Required fields in prismaData:**
 
 1. **variables** — Calibrated from the REAL data
    - id: snake_case (MUST be a recognizable name — e.g., "delivery_duration_avg" not "var_1")

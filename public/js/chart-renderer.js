@@ -159,6 +159,14 @@ const ChartRenderer = {
     container.textContent = '';
 
     kpiCards.forEach((kpi, index) => {
+      // Guard: skip KPI cards with non-numeric or placeholder values
+      const valStr = String(kpi.value || '').trim();
+      const digitCount = (valStr.match(/\d/g) || []).length;
+      const letterCount = (valStr.match(/[a-zA-Z]/g) || []).length;
+      if (digitCount === 0 || letterCount > digitCount * 3) {
+        return;
+      }
+
       const card = document.createElement('div');
       card.className = 'kpi-card';
       card.style.animationDelay = (index * 100) + 'ms';

@@ -367,13 +367,21 @@ module.exports = async function handler(req, res) {
       }
     }];
 
+    // Detect simulation-intent and force tool use deterministically
+    const lastUserMsg = messages[messages.length - 1];
+    const lastMsgText = typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : '';
+    const isSimulationRequest = /^what if\b/i.test(lastMsgText)
+      || /\bsimulate\b/i.test(lastMsgText);
+
     const response = await client.messages.create({
       model: 'claude-opus-4-20250514',
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: messages,
       tools: tools,
-      tool_choice: { type: 'auto' }
+      tool_choice: isSimulationRequest
+        ? { type: 'tool', name: 'update_dashboard' }
+        : { type: 'auto' }
     });
 
     // 5. Parse response — extract text message + tool calls
