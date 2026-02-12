@@ -227,6 +227,12 @@ Dashboard.handleToolCall = function(toolCall) {
 
   console.log(`Dashboard received update: phase=${phase}`);
 
+  // Check if server flagged a formula warning (validation failed on both attempts)
+  if (toolCall.input._formulaWarning) {
+    console.warn('[Dashboard] Server flagged formula warning — showing banner');
+    Dashboard._showFormulaWarning();
+  }
+
   if (prismaData) {
     Dashboard.mergePrismaData(prismaData);
   }
@@ -534,6 +540,15 @@ Dashboard.runSimulation = function() {
     console.log('Running Carlo simulation...');
     Dashboard.carloResults = Carlo.runCarloAllScenarios(state, Dashboard._iterationCount);
     console.log('Carlo results:', Dashboard.carloResults);
+
+    // All-zero detection: check if every scenario produced all-zero outcomes
+    const allZero = Dashboard._checkAllZeroOutcomes(Dashboard.carloResults);
+    if (allZero) {
+      console.warn('[All-Zero Detection] All scenarios produced zero outcomes — formula likely broken');
+      Dashboard._showFormulaWarning();
+    } else {
+      Dashboard._hideFormulaWarning();
+    }
 
     console.log('Running Nassim classification...');
     Dashboard.nassimResults = Nassim.classifyAllScenarios(Dashboard.carloResults, state);
@@ -1085,6 +1100,51 @@ Dashboard._fetchAIRefinement = function() {
         Dashboard._setRecCardsRefining(false);
       }
     });
+};
+
+/**
+ * Check if ALL outcomes for ALL scenarios are zero (or within epsilon).
+ * Returns true if the simulation couldn't differentiate between options.
+ */
+Dashboard._checkAllZeroOutcomes = function(carloResults) {
+  if (!carloResults) return false;
+  const EPSILON = 0.001;
+  for (const scenarioId of Object.keys(carloResults)) {
+    const outcomes = carloResults[scenarioId]?.outcomes;
+    if (!outcomes || outcomes.length === 0) continue;
+    const hasNonZero = outcomes.some(v => Math.abs(v) > EPSILON);
+    if (hasNonZero) return false;
+  }
+  return true;
+};
+
+/**
+ * Show the formula warning banner in the answer panel.
+ */
+Dashboard._showFormulaWarning = function() {
+  let banner = document.getElementById('formula-warning-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'formula-warning-banner';
+    banner.className = 'formula-warning-banner';
+    const strong = document.createElement('strong');
+    strong.textContent = 'Heads up:';
+    banner.appendChild(strong);
+    banner.appendChild(document.createTextNode(' The simulation couldn\'t differentiate between your options. Try rephrasing your question with more specific numbers.'));
+    const answerPanel = document.querySelector('.answer-panel');
+    if (answerPanel) {
+      answerPanel.insertBefore(banner, answerPanel.firstChild);
+    }
+  }
+  banner.classList.remove('hidden');
+};
+
+/**
+ * Hide the formula warning banner.
+ */
+Dashboard._hideFormulaWarning = function() {
+  const banner = document.getElementById('formula-warning-banner');
+  if (banner) banner.classList.add('hidden');
 };
 
 /**

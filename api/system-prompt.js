@@ -91,16 +91,27 @@ Include in prismaData:
 - Each variable id in the formula MUST exist in the variables array
 - Edge formulas use "target = expression" format; outcome formulas are pure expressions (no assignment)
 
-**Good formula examples:**
-- \`(daily_deliveries * 30 * revenue_per_delivery) - (cost_per_delivery * daily_deliveries * 30) - (monthly_driver_cost * driver_count) - fuel_cost_monthly\`
-- \`initial_investment * (price_future / price_current) - initial_investment\`
-- \`monthly_revenue - monthly_costs - monthly_salary * employee_count\`
-- \`Math.max(0, sales_volume * margin - fixed_costs)\`
+**Good formula patterns by decision type:**
+- Investment: \`initial_investment * (1 + annual_return_pct / 100) - initial_investment\`
+- Hire/cost: \`monthly_revenue - (cost_per_unit * units) - fixed_monthly_cost\`
+- General: \`benefit_value - cost_value\`
+- Delivery: \`(daily_deliveries * 30 * revenue_per_delivery) - (cost_per_delivery * daily_deliveries * 30) - (monthly_driver_cost * driver_count) - fuel_cost_monthly\`
+- Price comparison: \`initial_investment * (price_future / price_current) - initial_investment\`
+- Profit: \`monthly_revenue - monthly_costs - monthly_salary * employee_count\`
+- Clamped: \`Math.max(0, sales_volume * margin - fixed_costs)\`
+
+**WRONG vs RIGHT formula example (CRITICAL — read this):**
+Given variables: [{id: "annual_return_pct"}, {id: "initial_investment"}]
+- WRONG: \`investment * (1 + return / 100)\` — uses "investment" and "return" instead of exact variable ids → produces silent zeros
+- RIGHT: \`initial_investment * (1 + annual_return_pct / 100) - initial_investment\` — uses exact variable ids from the variables array
+
+**Cross-validation rule:** At least one variable in your formula MUST appear in at least one scenario's changes. If your formula uses annual_return_pct, at least one scenario must override annual_return_pct in its changes. Otherwise every scenario computes the same result and the simulation is useless.
 
 **BAD formula examples (will produce all zeros):**
 - \`(scenario === 'bitcoin') ? btc_return : etf_return\` — NEVER branch on scenario name
 - \`if (invest_btc) btc_price * holdings else savings * rate\` — NEVER use if/else
 - \`"high_risk" === scenario ? x : y\` — NEVER use string comparisons
+- \`investment * (1 + return / 100)\` — NEVER use shortened/renamed variable names; use EXACT ids
 
 **How to handle multiple investment/action options:**
 Instead of branching in the formula, define a single metric that ALL scenarios share. The scenario differences come from the variable overrides in \`changes\`. For example, for an investment decision:

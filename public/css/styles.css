@@ -1503,7 +1503,29 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* =============================================
-   12. UTILITY CLASSES
+   12. FORMULA WARNING BANNER
+   ============================================= */
+
+.formula-warning-banner {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-left: 3px solid var(--uncertain);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  animation: fadeIn 0.4s ease;
+}
+
+.formula-warning-banner strong {
+  color: var(--uncertain);
+}
+
+/* =============================================
+   13. UTILITY CLASSES
    ============================================= */
 
 .hidden {
@@ -1511,7 +1533,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* =============================================
-   13. RESPONSIVE
+   14. RESPONSIVE
    ============================================= */
 
 @media (min-width: 1920px) {

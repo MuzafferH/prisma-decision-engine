@@ -331,8 +331,21 @@ const Carlo = {
     // Apply scenario changes to variables
     const scenarioVariables = this.applyScenarioChanges(prismaData.variables, scenario);
 
-    // Analyze the outcome formula
+    // Defense-in-depth: check formula identifiers against variable keys
     const rawOutcomeFormula = prismaData.outcome?.formula;
+    if (rawOutcomeFormula) {
+      const formulaTokens = (rawOutcomeFormula.match(/\b[a-zA-Z_]\w*\b/g) || []);
+      const safeTokens = new Set([
+        'Math', 'max', 'min', 'pow', 'sqrt', 'abs', 'ceil', 'floor', 'log', 'exp', 'round',
+        'PI', 'E', 'Infinity', 'NaN', 'true', 'false', 'scenario',
+        'return', 'var', 'let', 'const', 'if', 'else', 'new', 'typeof'
+      ]);
+      const varIds = new Set(prismaData.variables.map(v => v.id));
+      const unknownIds = [...new Set(formulaTokens.filter(t => !safeTokens.has(t) && !varIds.has(t)))];
+      if (unknownIds.length > 0) {
+        console.warn(`[Carlo] Formula references unknown identifiers: [${unknownIds.join(', ')}]. Known variable ids: [${[...varIds].join(', ')}]. Formula: "${rawOutcomeFormula}"`);
+      }
+    }
     const variableIds = prismaData.variables.map(v => v.id);
     const { formula: outcomeFormula, needsScenarioId } = sanitizeFormula(rawOutcomeFormula, variableIds);
 
