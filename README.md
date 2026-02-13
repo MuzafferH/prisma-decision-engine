@@ -28,7 +28,13 @@ Each insight card comes with a "Simulate this" button. Click it, and **Carlo** (
 Simulations stack as independent cards — run as many as you want, compare results side by side.
 
 ### 4. Talk to your data
-Ask anything in the chat. "Show me details about late deliveries." "Break down costs by zone." "What's driving the Tuesday spike?" Prisma refreshes the dashboard with new charts and KPIs focused on your question. The dashboard is the presentation — not a wall of text.
+Ask anything in the chat. "Show me details about late deliveries." "Break down costs by zone." "What's driving the Tuesday spike?" Prisma creates a new analysis card with charts and KPIs focused on your question — your original dashboard stays untouched. Analysis cards stack and are collapsible, so you can compare findings across multiple questions.
+
+### 5. Never stare at a blank screen
+While Prisma analyzes your CSV, you see a dot-flow animation and rotating facts about the simulation engine — no dead loading states.
+
+### 6. Resilient simulations
+If a simulation fails (missing data, formula mismatch, engine error), you get an amber diagnostic card with a specific error message and a **Retry** button. Retry automatically enriches your prompt with exact column names from your data for better results. Behind the scenes, Prisma validates simulation data server-side and retries with Claude before it even reaches the browser.
 
 ## Architecture
 
@@ -51,7 +57,9 @@ public/
 └── data/                     Sample CSVs
 
 api/
-├── chat.js                   Vercel serverless (Anthropic proxy, formula validation)
+├── _auth.js                  Password gate helper
+├── gate.js                   Gate status + password validation
+├── chat.js                   Vercel serverless (Anthropic proxy, formula validation, simulation validation+retry)
 ├── system-prompt.js          Prisma's behavior instructions
 └── refine-recommendations.js Recommendation refinement endpoint
 ```
@@ -62,8 +70,8 @@ api/
 
 1. **CSV upload** → PapaParse parses client-side → CSVAnalyzer extracts distributions, trends, breakpoints → stats sent to Claude
 2. **Claude responds** with a `tool_call` containing chart specs, KPI definitions, and insight cards → client renders everything from raw data
-3. **Simulation trigger** → Claude generates variables, scenarios, outcome formula → Carlo runs 1,000 iterations per scenario in the browser → sensitivity analysis ranks variables by impact
-4. **Conversational follow-ups** → Claude re-calls `data_overview` with new chart/KPI specs → dashboard refreshes, simulation cards stay untouched
+3. **Simulation trigger** → Claude generates variables, scenarios, outcome formula → server validates required fields (retries if missing) → Carlo runs 1,000 iterations per scenario in the browser → sensitivity analysis ranks variables by impact → success card or diagnostic card with retry
+4. **Conversational follow-ups** → Claude re-calls `data_overview` with new chart/KPI specs → analysis card stacks below original dashboard (original preserved) → simulation cards stay untouched
 
 All simulation math runs **client-side**. No data leaves your machine except column statistics sent to Claude for reasoning.
 
@@ -120,6 +128,7 @@ This project was built entirely with Claude Code (Opus 4.6) during the hackathon
 4. **Dashboard system** — Iterative development of charts, KPIs, insights, simulation cards
 5. **Landing page** — "Design battle" approach: parallel agents with different philosophies, best of each
 6. **Bug fixes** — Parallel agent code review to trace simulation failures across 6 files simultaneously
+7. **Reliability** — 5-layer defensive fix for simulation cards: null guards, stopReason mismatch fix, server-side validation+retry, prompt enrichment with CSV stats, diagnostic failed cards with retry
 
 ## License
 

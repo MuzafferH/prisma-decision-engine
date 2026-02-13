@@ -18,16 +18,16 @@ public/index.html            ← Landing page (interactive dot grid, particle bu
 public/app.html              ← Main app (chat + dashboard + password gate overlay)
 public/css/styles.css        ← App styles (warm palette, rose borders)
 public/js/button-particles.js ← CTA button particle system (PrismaButtonParticles class)
-public/js/chat.js            ← Chat + API communication (includes auth headers)
-public/js/dashboard.js       ← Dashboard orchestrator (simulation history, phase routing)
-public/js/chart-renderer.js  ← KPI, charts, insights, Futures Cascade rendering
+public/js/chat.js            ← Chat + API communication (auth headers, simulation prompt enrichment)
+public/js/dashboard.js       ← Dashboard orchestrator (simulation history, analysis history, phase routing)
+public/js/chart-renderer.js  ← KPI, charts, insights, Futures Cascade, loading facts, renderInto variants
 public/js/visualizations.js  ← Plotly charts (tornado, histogram, sliders, causal graph)
 public/js/carlo.js           ← Monte Carlo engine (1000 iterations)
 public/js/nassim.js          ← Taleb classifier + sensitivity analysis (2-phase async)
 public/js/csv-analyzer.js    ← CSV stats extraction (distributions, trends, breakpoints)
 api/_auth.js                 ← Shared password gate helper (checkGate)
 api/gate.js                  ← GET: {gated: bool}, POST: validates password {valid: bool}
-api/chat.js                  ← Serverless API (Anthropic proxy, tool_choice forcing, gate-protected)
+api/chat.js                  ← Serverless API (Anthropic proxy, tool_choice forcing, simulation validation+retry, gate-protected)
 api/refine-recommendations.js ← AI-refined slider recommendations (gate-protected)
 api/system-prompt.js         ← System prompt (Prisma's behavior instructions)
 ```
@@ -70,7 +70,46 @@ Simulations no longer replace each other — they stack as independent cards.
 - Async sensitivity Phase 2 callback captures `simId` in closure → writes to correct entry
 - `Visualizations.renderTornado()` accepts optional 3rd `targetContainer` param (no more ID-swap hack)
 
+**Failed sim cards:** When simulation fails (missing data, formula mismatch, engine error):
+- `_createFailedSimCard(label, diagnostic)` creates an amber-bordered card with specific diagnostic
+- Has a **Retry** button that removes the failed card and re-triggers via `Chat.triggerSimulation()`
+- Retry enriches the prompt with CSV column stats for better variable name matching
+- `activateForPhase('simulation')` is the caller — it checks `_simCounter` and creates success or failed card
+
 **Legacy compat:** Global `Dashboard.carloResults` / `nassimResults` still updated for layer-1/2/3 mode.
+
+### Analysis History (follow-up questions)
+Follow-up data questions no longer wipe the initial dashboard — they create stacking analysis cards.
+
+**Data model:** `Dashboard.analysisHistory[]` — array of analysis snapshots (max 10):
+```javascript
+{ id, timestamp, label, prismaData: { kpiCards, charts, insights, dataSummary }, expanded }
+```
+
+**Key patterns:**
+- `showDataOverview()` branches: first call renders normally, subsequent calls create analysis cards
+- Label is the **user's actual question** (extracted from last Chat.messages user entry)
+- `_createAnalysisCard(label)` creates expandable card in `#analysis-history` container
+- Namespaced IDs: `analysis-{id}-kpi`, `analysis-{id}-charts`, `analysis-{id}-insights`
+- `ChartRenderer.renderDataOverviewInto()` renders into arbitrary containers (not hardcoded IDs)
+- Collapse purges Plotly charts. Expand re-renders from stored snapshot.
+- CSV upload resets: `_dataOverviewRendered = false`, `_analysisCounter = 0`, clear container
+
+### Simulation Reliability — 5 Defensive Layers
+The simulation path from "Simulate this" click to card creation has 5 independent failure modes, each with a defensive layer:
+
+1. **Null `edges` crash** — `dashboard.js` initializes `edges = []` (not `null`), `carlo.js` guards with `(prismaData.edges || [])`
+2. **`stopReason` mismatch** — `chat.js` checks `response.toolCall && (stopReason === 'tool_use' || stopReason === 'end_turn')` in BOTH `sendMessage()` and `sendFollowUp()`. Ensures tool_use/tool_result pair always enters conversation history.
+3. **Missing required fields** — `api/chat.js` validates `variables`, `scenarios`, `outcome`, `edges` on simulation-phase tool calls. Retries once with forced tool_choice and hint message. `_retried` flag prevents loops.
+4. **CSV column name mismatch** — `Chat.triggerSimulation()` enriches prompt with `[SIMULATION CONTEXT — use these exact column names as variable IDs: ...]` appended from `Dashboard._csvAnalysis`. System prompt has CRITICAL instructions for this.
+5. **Silent engine failure** — `activateForPhase('simulation')` checks `_simCounter` increment. If simulation didn't produce results, `_createFailedSimCard()` shows amber card with diagnostic + Retry button.
+
+### Loading Screen Facts
+During CSV analysis (skeleton loading state), chart area shows a fact display instead of empty skeleton cards:
+- CSS dot flow animation: 5 rose dots drifting left→right ("Your data → Your answer")
+- 6 rotating facts about Prisma/simulation, cycling every 2.5s with fade transition
+- `_clearLoadingFacts()` cleanup called on `renderDataOverview()` and `renderDataOverviewInto()`
+- `prefers-reduced-motion` disables animation
 
 ### Known Bug Patterns (avoid these)
 1. **Empty text blocks** in tool_use messages → 400 error. Always use spread: `...(msg ? [{type:'text',text:msg}] : [])`
@@ -79,10 +118,12 @@ Simulations no longer replace each other — they stack as independent cards.
 4. **Non-numeric KPI values** → `renderKPICards()` has digit-vs-letter ratio guard
 5. **Simulation text-only responses** → `api/chat.js` forces `tool_choice` for "what if"/"simulate" messages
 6. **Duplicate event listeners** → NEVER add `addEventListener` inside functions called multiple times. Attach once in `init()` or use event delegation.
-7. **Hardcoded element IDs in rendering functions** → Always pass container as param. `visualizations.js` functions like `renderTornado` now accept optional container — use it.
+7. **Hardcoded element IDs in rendering functions** → Always pass container as param. `visualizations.js` functions like `renderTornado` now accept optional container — use it. `ChartRenderer` now has `renderDataOverviewInto()` + `renderKPICardsInto()` / `renderChartsInto()` / `renderInsightsInto()` variants.
 8. **Visualizations.renderSliders()** ignores its 2nd arg — it's dead code. Front-page sliders use `renderFrontPageSliders()` instead.
 9. **rAF IDs in global arrays** → NEVER push rAF IDs inside animation loops (grows unboundedly). Use fixed-index slots (`[0]` for dot grid, `[1]` for cascade) or register class instances.
 10. **Canvas DPR scaling** → Always set `canvas.width = displayWidth * dpr` and `ctx.scale(dpr, dpr)`. Missing this = content renders in top-left quadrant only on retina displays.
+11. **Null `edges` in simulation state** → `dashboard.js` clears to `[]` not `null`. `carlo.js` guards iteration with `(edges || [])`. Both needed — belt and suspenders.
+12. **`stopReason` mismatch with `tool_choice`** → When `tool_choice: { type: 'tool' }` is set, API returns `stop_reason: "end_turn"` not `"tool_use"`. Check for toolCall existence, not just stopReason.
 
 ### API Gate (Password Protection)
 Protects Anthropic API credits. Toggle via single env var — no code changes needed.
