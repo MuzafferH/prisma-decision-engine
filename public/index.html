@@ -303,6 +303,8 @@
       height: 100%;
       border-radius: 4px;
       width: 0;
+      transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1), background 0.6s ease;
+      will-change: width, background;
     }
     .sim-row:nth-child(1) .sim-bar-fill {
       background: linear-gradient(90deg, #2563eb, #3b82f6);
@@ -327,6 +329,7 @@
       min-width: 60px;
       text-align: left;
       opacity: 0;
+      transition: opacity 0.15s ease, color 0.3s ease;
     }
     .sim-row:nth-child(1) .sim-value {
       color: #10B981;
@@ -339,6 +342,30 @@
     .sim-row:nth-child(3) .sim-value {
       color: #EF4444;
       animation: fadeIn 0.4s ease 2.0s forwards;
+    }
+
+    /* ====== MINI SIM QUESTION + REALTIME LABEL ====== */
+    .sim-question {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-style: italic;
+      color: var(--text3);
+      margin-bottom: 8px;
+      opacity: 0;
+      animation: fadeUp 0.6s var(--ease-out) 1.1s forwards;
+    }
+    .sim-realtime {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text3);
+      opacity: 0;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+      animation: fadeToSixty 0.4s ease 2.6s forwards;
+    }
+    @keyframes fadeToSixty {
+      from { opacity: 0; }
+      to   { opacity: 0.6; }
     }
 
     /* ====== DESCRIPTION ====== */
@@ -711,6 +738,9 @@
       <!-- Accent line -->
       <div class="accent-line"></div>
 
+      <!-- Framing question (OUTSIDE .mini-sim to preserve nth-child selectors) -->
+      <p class="sim-question"><em>"Should I hire two more drivers before Q3?"</em></p>
+
       <!-- Mini simulation bars -->
       <div class="mini-sim">
         <div class="sim-row">
@@ -729,6 +759,9 @@
           <span class="sim-value">&minus;&euro;1,400</span>
         </div>
       </div>
+
+      <!-- Real-time label -->
+      <p class="sim-realtime">1,000 scenarios &middot; computed in real-time</p>
 
       <!-- Description -->
       <p class="description">
@@ -844,8 +877,11 @@
       btn.addEventListener('click', function(e) {
         e.preventDefault();
         const href = this.getAttribute('href');
-        // Cancel all canvas animations
-        window.__prismaAnimations.forEach(id => cancelAnimationFrame(id));
+        // Cancel all canvas animations (slot 2 = setInterval, rest = rAF)
+        window.__prismaAnimations.forEach((id, idx) => {
+          if (idx === 2) clearInterval(id);
+          else cancelAnimationFrame(id);
+        });
         window.__prismaAnimations = [];
         // Stop button particle instances
         if (window.__prismaParticles) {
@@ -1355,6 +1391,135 @@
       }, { threshold: 0.5 });
 
       document.querySelectorAll('.stat-block').forEach(b => proofObs.observe(b));
+    })();
+
+    // ====== LIVE INTERACTIVE SIM BARS ======
+    (function() {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReducedMotion) return;
+
+      // Box-Muller transform: Normal(0,1) sample
+      function boxMullerRandom() {
+        let u = 0, v = 0;
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+        return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+      }
+
+      // Clamped normal sample
+      function sampleValue(center, spread, min, max) {
+        const raw = center + boxMullerRandom() * spread;
+        return Math.max(min, Math.min(max, raw));
+      }
+
+      // Format value with unicode minus and euro
+      function formatValue(num) {
+        const rounded = Math.round(num / 100) * 100;
+        const abs = Math.abs(rounded).toLocaleString();
+        if (rounded < 0) return '\u2212\u20AC' + abs;
+        return '+\u20AC' + abs;
+      }
+
+      function lerp(a, b, t) { return a + (b - a) * t; }
+
+      // Scenario config: center values, width %, value range
+      const scenarios = [
+        { centerVal: 3100, centerWidth: 78, minVal: 2200, maxVal: 4100, minW: 5, maxW: 98, alwaysPositive: true },
+        { centerVal: 1200, centerWidth: 42, minVal: 600,  maxVal: 1900, minW: 5, maxW: 98, alwaysPositive: true },
+        { centerVal: -1400, centerWidth: 62, minVal: -3200, maxVal: 800, minW: 5, maxW: 98, alwaysPositive: false },
+      ];
+
+      function initLiveSim() {
+        const miniSim = document.querySelector('.mini-sim');
+        if (!miniSim) return;
+
+        const bars = miniSim.querySelectorAll('.sim-bar-fill');
+        const vals = miniSim.querySelectorAll('.sim-value');
+        if (bars.length !== 3 || vals.length !== 3) return;
+
+        // Kill CSS animations and pin current computed values
+        bars.forEach(bar => {
+          const currentWidth = getComputedStyle(bar).width;
+          bar.style.animation = 'none';
+          bar.style.width = currentWidth;
+        });
+        vals.forEach(val => {
+          val.style.animation = 'none';
+          val.style.opacity = '1';
+        });
+
+        let uncertaintyFactor = 0.3;
+
+        // Cursor-as-uncertainty-dial
+        miniSim.addEventListener('mousemove', function(e) {
+          const rect = miniSim.getBoundingClientRect();
+          uncertaintyFactor = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        }, { passive: true });
+
+        miniSim.addEventListener('mouseleave', function() {
+          uncertaintyFactor = 0.3;
+        });
+
+        function resample() {
+          scenarios.forEach(function(sc, i) {
+            // Value spread scaled by uncertainty
+            var valSpread = lerp(0.15, 0.35, uncertaintyFactor) * Math.abs(sc.centerVal || 1000);
+            var newVal = sampleValue(sc.centerVal, valSpread, sc.minVal, sc.maxVal);
+
+            // Width: map value proportionally from value range to width range
+            var valRange = sc.maxVal - sc.minVal;
+            var valNorm = valRange > 0 ? (newVal - sc.minVal) / valRange : 0.5;
+            // Add width spread based on uncertainty
+            var widthSpread = lerp(15, 35, uncertaintyFactor);
+            var baseWidth = sc.minW + valNorm * (sc.maxW - sc.minW);
+            var newWidth = sampleValue(baseWidth, widthSpread * 0.3, sc.minW, sc.maxW);
+
+            // Set bar width
+            bars[i].style.width = newWidth + '%';
+
+            // Bar 3: flip green when positive
+            if (i === 2) {
+              if (newVal > 0) {
+                bars[2].style.background = 'linear-gradient(90deg, #10B981, #34D399)';
+                vals[2].style.color = '#10B981';
+              } else {
+                bars[2].style.removeProperty('background');
+                vals[2].style.color = '#EF4444';
+              }
+            }
+
+            // Crossfade value text via double-rAF
+            var val = vals[i];
+            val.style.opacity = '0.3';
+            var txt = formatValue(newVal);
+            requestAnimationFrame(function() {
+              requestAnimationFrame(function() {
+                val.textContent = txt;
+                val.style.opacity = '1';
+              });
+            });
+          });
+        }
+
+        // IntersectionObserver: pause off-screen, resume on-screen
+        var liveSimInterval = null;
+        var liveSimObs = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting && !liveSimInterval) {
+              liveSimInterval = setInterval(resample, 2000);
+              window.__prismaAnimations[2] = liveSimInterval;
+            } else if (!entry.isIntersecting && liveSimInterval) {
+              clearInterval(liveSimInterval);
+              liveSimInterval = null;
+              window.__prismaAnimations[2] = null;
+            }
+          });
+        }, { threshold: 0 });
+        liveSimObs.observe(miniSim);
+      }
+
+      // Start after initial CSS animations complete (last bar finishes at ~2.4s)
+      setTimeout(initLiveSim, 2500);
     })();
   </script>
 
