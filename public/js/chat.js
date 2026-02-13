@@ -12,6 +12,14 @@ const Chat = {
   MIN_REQUEST_INTERVAL: 3000 // 3 seconds between requests
 };
 
+// Strip fabricated percentage claims from simulation messages (Claude guesses before Carlo runs)
+Chat._stripFabricatedPercentages = function(text) {
+  if (!text) return text;
+  var cleaned = text.replace(/\b\d{1,3}%\s*(probability|chance|likelihood|of\s+positive|positive\s+outcome)/gi, 'a computed probability');
+  cleaned = cleaned.replace(/\b(probability|chance|likelihood)\s+of\s+\d{1,3}%/gi, 'a computed probability');
+  return cleaned;
+};
+
 // Auth header helper — includes password from sessionStorage when gate is active
 Chat._getAuthHeaders = function() {
   var headers = { 'Content-Type': 'application/json' };
@@ -187,9 +195,15 @@ Chat.sendMessage = async function() {
       return;
     }
 
-    // Display assistant's message
+    // Display assistant's message (strip fabricated percentages for simulation phases)
     if (response.message) {
-      this.displayMessage('assistant', response.message);
+      let msg = response.message;
+      if (response.toolCall?.input?.phase === 'simulation') {
+        msg = Chat._stripFabricatedPercentages(msg);
+      }
+      if (msg && msg.trim()) {
+        this.displayMessage('assistant', msg);
+      }
     }
 
     // Handle tool call
@@ -308,9 +322,15 @@ Chat.sendFollowUp = async function() {
     this.isLoading = false;
     sendBtn.disabled = false;
 
-    // Display message
+    // Display message (strip fabricated percentages for simulation phases)
     if (response.message) {
-      this.displayMessage('assistant', response.message);
+      let msg = response.message;
+      if (Dashboard._dataMode && Dashboard.currentPhase === 'simulation') {
+        msg = Chat._stripFabricatedPercentages(msg);
+      }
+      if (msg && msg.trim()) {
+        this.displayMessage('assistant', msg);
+      }
     }
 
     // Handle another tool call if present
@@ -558,6 +578,12 @@ Chat.handleCSVUpload = async function(file) {
       plots.forEach(function(p) { try { Plotly.purge(p); } catch(e) {} });
       analysisHistory.textContent = '';
     }
+    // Hide section labels
+    document.getElementById('analysis-section-label')?.classList.remove('visible');
+    document.getElementById('sim-section-label')?.classList.remove('visible');
+    // Clear simulation history
+    const simHistory = document.getElementById('simulation-history');
+    if (simHistory) simHistory.textContent = '';
   }
 
   // Show skeleton loading in dashboard immediately

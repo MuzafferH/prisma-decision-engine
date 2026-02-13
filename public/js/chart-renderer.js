@@ -86,12 +86,12 @@ const ChartRenderer = {
   // ==================== SKELETON LOADING ====================
 
   _loadingFacts: [
-    'Carlo runs 1,000 randomized futures for every scenario you test.',
-    'Nassim classifies your decision as Fragile, Robust, or Antifragile.',
-    'Prisma was built in 48 hours for the Anthropic Claude Code Hackathon.',
-    'The tornado diagram shows which variable swings your outcome the most.',
-    'Every chart is computed from YOUR data \u2014 Claude only provides the spec.',
-    'Prisma uses Monte Carlo simulation \u2014 the same math that prices stock options.'
+    'Monte Carlo simulation was invented at Los Alamos in the 1940s \u2014 named after the famous casino.',
+    'A single decision with 5 uncertain variables has over 3 billion possible outcomes.',
+    'Every chart you see is computed from your actual data \u2014 Claude only provides the spec.',
+    'The tornado diagram reveals which single variable swings your outcome the most.',
+    'This entire app was built with Claude Code \u2014 Anthropic\u2019s AI coding agent.',
+    'You can chat with your data in plain English \u2014 ask any question about your numbers.',
   ],
   _loadingFactInterval: null,
 
@@ -145,31 +145,16 @@ const ChartRenderer = {
       const factCard = document.createElement('div');
       factCard.className = 'skeleton-fact-card';
 
-      // Dot flow animation
-      const flow = document.createElement('div');
-      flow.className = 'skeleton-fact-flow';
+      // "ANALYZING" label
+      const analyzeLabel = document.createElement('div');
+      analyzeLabel.className = 'skeleton-analyzing-label';
+      analyzeLabel.textContent = 'ANALYZING';
+      factCard.appendChild(analyzeLabel);
 
-      const labelLeft = document.createElement('span');
-      labelLeft.className = 'flow-label';
-      labelLeft.textContent = 'Your data';
-      flow.appendChild(labelLeft);
-
-      const dots = document.createElement('div');
-      dots.className = 'flow-dots';
-      for (let i = 0; i < 5; i++) {
-        const dot = document.createElement('span');
-        dot.className = 'flow-dot';
-        dot.style.animationDelay = (i * 0.4) + 's';
-        dots.appendChild(dot);
-      }
-      flow.appendChild(dots);
-
-      const labelRight = document.createElement('span');
-      labelRight.className = 'flow-label';
-      labelRight.textContent = 'Your answer';
-      flow.appendChild(labelRight);
-
-      factCard.appendChild(flow);
+      // Progress bar
+      const progressBar = document.createElement('div');
+      progressBar.className = 'skeleton-progress-bar';
+      factCard.appendChild(progressBar);
 
       // Rotating fact text
       const factText = document.createElement('div');
@@ -181,7 +166,7 @@ const ChartRenderer = {
 
       chartGrid.appendChild(factCard);
 
-      // Rotate facts every 2.5s
+      // Rotate facts every 5s
       this._clearLoadingFacts();
       let currentIdx = randomIndex;
       this._loadingFactInterval = setInterval(() => {
@@ -192,8 +177,8 @@ const ChartRenderer = {
           currentIdx = (currentIdx + 1) % this._loadingFacts.length;
           el.textContent = this._loadingFacts[currentIdx];
           el.style.opacity = '1';
-        }, 300);
-      }, 2500);
+        }, 400);
+      }, 5000);
     }
   },
 

@@ -287,6 +287,11 @@ module.exports = async function handler(req, res) {
                   label: { type: 'string', description: 'Human-readable name' },
                   unit: { type: 'string', description: 'Unit of measurement' },
                   formula: { type: 'string', description: 'JavaScript formula using variable ids' },
+                  direction: {
+                    type: 'string',
+                    enum: ['higher_is_better', 'lower_is_better'],
+                    description: 'Whether higher values are better (revenue/savings) or worse (costs). Default: higher_is_better'
+                  },
                   positiveLabel: { type: 'string', description: 'Label for positive outcomes' },
                   negativeLabel: { type: 'string', description: 'Label for negative outcomes' }
                 },

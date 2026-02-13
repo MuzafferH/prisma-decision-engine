@@ -1550,8 +1550,14 @@ Dashboard._createSimCard = function() {
 
   const scoreEl = document.createElement('span');
   scoreEl.className = 'teaser-score';
-  scoreEl.textContent = pct + '% positive outcome';
+  scoreEl.textContent = pct >= 99
+    ? pct + '% positive outcome (narrow range)'
+    : pct + '% positive outcome';
 
+  const simBadge = document.createElement('span');
+  simBadge.className = 'card-type-badge sim-badge';
+  simBadge.textContent = 'SIMULATION';
+  teaserContent.appendChild(simBadge);
   teaserContent.appendChild(labelEl);
   teaserContent.appendChild(scoreEl);
 
@@ -1619,6 +1625,9 @@ Dashboard._createSimCard = function() {
 
   // Prepend (newest on top)
   historyContainer.prepend(card);
+
+  // Show section label
+  document.getElementById('sim-section-label')?.classList.add('visible');
 
   // Chat confirmation
   if (typeof Chat !== 'undefined') {
@@ -1737,6 +1746,16 @@ Dashboard._createAnalysisCard = function(label) {
   const displayLabel = label.length > 100 ? label.substring(0, 97) + '...' : label;
   labelEl.textContent = displayLabel;
 
+  const analysisBadge = document.createElement('span');
+  analysisBadge.className = 'card-type-badge analysis-badge';
+  analysisBadge.textContent = 'ANALYSIS';
+
+  // Wrap badge + label so header stays 2-child flex (left group + toggle)
+  const headerLeft = document.createElement('div');
+  headerLeft.className = 'analysis-header-left';
+  headerLeft.appendChild(analysisBadge);
+  headerLeft.appendChild(labelEl);
+
   const toggleBtn = document.createElement('button');
   toggleBtn.className = 'analysis-card-toggle';
   toggleBtn.textContent = 'Collapse';
@@ -1744,7 +1763,7 @@ Dashboard._createAnalysisCard = function(label) {
     Dashboard._toggleAnalysisCard(aId);
   });
 
-  header.appendChild(labelEl);
+  header.appendChild(headerLeft);
   header.appendChild(toggleBtn);
 
   // Content
@@ -1772,6 +1791,9 @@ Dashboard._createAnalysisCard = function(label) {
   card.appendChild(content);
 
   historyContainer.prepend(card);
+
+  // Show section label
+  document.getElementById('analysis-section-label')?.classList.add('visible');
 
   // Render into card-specific containers
   if (typeof ChartRenderer !== 'undefined') {

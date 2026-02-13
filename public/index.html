@@ -424,6 +424,50 @@
       }
     }
 
+    /* ====== FEATURE HIGHLIGHT ====== */
+    .feature-highlight {
+      position: relative; z-index: 1;
+      padding: 60px 24px;
+      display: flex; justify-content: center;
+      text-align: center;
+    }
+    .feature-highlight-inner { max-width: 520px; }
+    .feature-highlight-badge {
+      font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: #10B981; background: rgba(16,185,129,0.08);
+      padding: 3px 10px; border-radius: 4px;
+      display: inline-block; margin-bottom: 16px;
+    }
+    .feature-highlight-headline {
+      font-family: 'Geist Pixel Triangle', monospace;
+      font-size: clamp(1.4rem, 3vw, 1.75rem);
+      color: #14141C; letter-spacing: 0.03em; margin-bottom: 12px;
+    }
+    .feature-highlight-desc {
+      font-size: 15px; color: #786065; line-height: 1.6; margin-bottom: 28px;
+    }
+    .feature-highlight-example {
+      display: inline-flex; align-items: center; gap: 12px;
+      padding: 12px 20px;
+      background: rgba(255,255,255,0.6); border: 1px solid rgba(245,192,192,0.25);
+      border-radius: 8px;
+    }
+    .feature-example-q {
+      font-size: 13px; font-weight: 500; color: #14141C; font-style: italic;
+    }
+    .feature-example-arrow {
+      font-family: monospace; font-size: 16px; color: #786065; opacity: 0.5;
+    }
+    .feature-example-a {
+      font-family: 'Geist Mono', monospace; font-size: 12px;
+      font-weight: 600; color: #2563EB;
+    }
+    @media (max-width: 640px) {
+      .feature-highlight-example { flex-direction: column; gap: 6px; }
+      .feature-example-arrow { transform: rotate(90deg); }
+    }
+
     /* ====== SCROLL SECTIONS ====== */
     .proof-section {
       position: relative;
@@ -712,6 +756,23 @@
       <div class="cascade-step">
         <canvas class="cascade-canvas" id="cascade-3"></canvas>
         <span class="cascade-label">Your answer</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== FEATURE: Chat with your data ====== -->
+  <section class="feature-highlight reveal">
+    <div class="feature-highlight-inner">
+      <span class="feature-highlight-badge">NEW</span>
+      <h2 class="feature-highlight-headline">Chat with your data.</h2>
+      <p class="feature-highlight-desc">
+        Upload a CSV, then ask questions in plain English. Prisma answers with KPIs,
+        charts, and insights &mdash; computed from your actual numbers, not guesses.
+      </p>
+      <div class="feature-highlight-example">
+        <span class="feature-example-q">"Which drivers have the most Monday absences?"</span>
+        <span class="feature-example-arrow">&rarr;</span>
+        <span class="feature-example-a">3 KPIs &middot; 4 charts &middot; 2 risks flagged</span>
       </div>
     </div>
   </section>

@@ -459,8 +459,10 @@ const Carlo = {
         outcomeValue = values['monthly_profit'] || 0;
       }
 
-      // Delta from baseline
-      const outcome = outcomeValue - baselineProfitValue;
+      // Delta from baseline (direction-aware)
+      const rawDelta = outcomeValue - baselineProfitValue;
+      const isLowerBetter = prismaData.outcome && prismaData.outcome.direction === 'lower_is_better';
+      const outcome = isLowerBetter ? -rawDelta : rawDelta;
       outcomes.push(outcome);
     }
 
