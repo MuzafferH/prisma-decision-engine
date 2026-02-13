@@ -290,6 +290,7 @@
       color: var(--text2);
       min-width: 100px;
       text-align: right;
+      transition: opacity 0.25s ease;
     }
     .sim-bar-track {
       flex: 1;
@@ -344,6 +345,38 @@
       animation: fadeIn 0.4s ease 2.0s forwards;
     }
 
+    /* ====== DOMAIN PILLS ====== */
+    .sim-pills {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      opacity: 0;
+      animation: fadeUp 0.6s var(--ease-out) 1.0s forwards;
+    }
+    .sim-pill {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: var(--text3);
+      background: transparent;
+      border: 1px solid rgba(245, 192, 192, 0.28);
+      border-radius: 4px;
+      padding: 4px 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .sim-pill:hover {
+      border-color: rgba(245, 192, 192, 0.5);
+      color: var(--text2);
+    }
+    .sim-pill.active {
+      background: rgba(245, 192, 192, 0.15);
+      border-color: var(--rose);
+      color: var(--text);
+      font-weight: 600;
+    }
+
     /* ====== MINI SIM QUESTION + REALTIME LABEL ====== */
     .sim-question {
       font-family: var(--font-sans);
@@ -353,6 +386,7 @@
       margin-bottom: 8px;
       opacity: 0;
       animation: fadeUp 0.6s var(--ease-out) 1.1s forwards;
+      transition: opacity 0.25s ease;
     }
     .sim-realtime {
       font-family: var(--font-mono);
@@ -737,6 +771,13 @@
 
       <!-- Accent line -->
       <div class="accent-line"></div>
+
+      <!-- Domain pills (clickable, no auto-rotation) -->
+      <div class="sim-pills">
+        <button class="sim-pill active" data-domain="operations">Operations</button>
+        <button class="sim-pill" data-domain="medicine">Medicine</button>
+        <button class="sim-pill" data-domain="marketing">Marketing</button>
+      </div>
 
       <!-- Framing question (OUTSIDE .mini-sim to preserve nth-child selectors) -->
       <p class="sim-question"><em>"Should I hire two more drivers before Q3?"</em></p>
@@ -1393,66 +1434,148 @@
       document.querySelectorAll('.stat-block').forEach(b => proofObs.observe(b));
     })();
 
-    // ====== LIVE INTERACTIVE SIM BARS ======
+    // ====== LIVE INTERACTIVE SIM BARS (multi-domain) ======
     (function() {
-      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // ── Multi-domain scenario config ──
+      var domains = {
+        operations: {
+          question: '\u201CShould I hire two more drivers before Q3?\u201D',
+          labels: ['Hire in Q2', 'Raise prices', 'Expand market'],
+          scenarios: [
+            { centerVal: 3100, centerWidth: 78, minVal: 2200, maxVal: 4100, minW: 5, maxW: 98, alwaysPositive: true },
+            { centerVal: 1200, centerWidth: 42, minVal: 600, maxVal: 1900, minW: 5, maxW: 98, alwaysPositive: true },
+            { centerVal: -1400, centerWidth: 62, minVal: -3200, maxVal: 800, minW: 5, maxW: 98, alwaysPositive: false }
+          ],
+          formatValue: function(num) {
+            var rounded = Math.round(num / 100) * 100;
+            var abs = Math.abs(rounded).toLocaleString();
+            return (rounded < 0 ? '\u2212\u20AC' : '+\u20AC') + abs;
+          }
+        },
+        medicine: {
+          question: '\u201CShould we switch to the new treatment protocol?\u201D',
+          labels: ['New protocol', 'Keep current', 'Hybrid approach'],
+          scenarios: [
+            { centerVal: 14, centerWidth: 78, minVal: 8, maxVal: 22, minW: 5, maxW: 98, alwaysPositive: true },
+            { centerVal: 6, centerWidth: 42, minVal: 2, maxVal: 11, minW: 5, maxW: 98, alwaysPositive: true },
+            { centerVal: -3, centerWidth: 62, minVal: -12, maxVal: 5, minW: 5, maxW: 98, alwaysPositive: false }
+          ],
+          formatValue: function(num) {
+            var rounded = Math.round(num);
+            return (rounded < 0 ? '\u2212' : '+') + Math.abs(rounded) + '%';
+          }
+        },
+        marketing: {
+          question: '\u201CShould we double our ad spend for Black Friday?\u201D',
+          labels: ['Double spend', 'Reallocate budget', 'Hold steady'],
+          scenarios: [
+            { centerVal: 28000, centerWidth: 78, minVal: 18000, maxVal: 41000, minW: 5, maxW: 98, alwaysPositive: true },
+            { centerVal: 12000, centerWidth: 42, minVal: 5000, maxVal: 19000, minW: 5, maxW: 98, alwaysPositive: true },
+            { centerVal: -8000, centerWidth: 62, minVal: -22000, maxVal: 6000, minW: 5, maxW: 98, alwaysPositive: false }
+          ],
+          formatValue: function(num) {
+            var rounded = Math.round(num / 100) * 100;
+            var abs = '$' + Math.abs(rounded).toLocaleString();
+            return (rounded < 0 ? '\u2212' : '+') + abs;
+          }
+        }
+      };
+
+      var activeDomain = 'operations';
+
+      // ── Pill click handler (works even with reduced motion) ──
+      var pillBar = document.querySelector('.sim-pills');
+      if (pillBar) {
+        pillBar.addEventListener('click', function(e) {
+          var pill = e.target.closest('.sim-pill');
+          if (!pill || pill.classList.contains('active')) return;
+          var domain = pill.getAttribute('data-domain');
+          if (!domains[domain]) return;
+
+          // Update active pill
+          pillBar.querySelector('.sim-pill.active').classList.remove('active');
+          pill.classList.add('active');
+          activeDomain = domain;
+
+          var cfg = domains[domain];
+          var questionEl = document.querySelector('.sim-question');
+          var emEl = questionEl ? questionEl.querySelector('em') : null;
+          var labelEls = document.querySelectorAll('.sim-label');
+
+          if (prefersReducedMotion) {
+            // Instant swap, no crossfade
+            if (emEl) emEl.textContent = cfg.question;
+            labelEls.forEach(function(el, i) { el.textContent = cfg.labels[i]; });
+            if (typeof window.__prismaResample === 'function') window.__prismaResample();
+            return;
+          }
+
+          // Crossfade question: fade out, swap text, fade in
+          if (questionEl && emEl) {
+            questionEl.style.opacity = '0';
+            setTimeout(function() {
+              emEl.textContent = cfg.question;
+              questionEl.style.opacity = '';
+            }, 250);
+          }
+
+          // Crossfade labels
+          labelEls.forEach(function(el, i) {
+            el.style.opacity = '0';
+            setTimeout(function() {
+              el.textContent = cfg.labels[i];
+              el.style.opacity = '';
+            }, 250);
+          });
+
+          // Trigger immediate resample so bars update on click
+          if (typeof window.__prismaResample === 'function') window.__prismaResample();
+        });
+      }
+
       if (prefersReducedMotion) return;
 
-      // Box-Muller transform: Normal(0,1) sample
+      // ── Sampling utilities ──
       function boxMullerRandom() {
-        let u = 0, v = 0;
+        var u = 0, v = 0;
         while (u === 0) u = Math.random();
         while (v === 0) v = Math.random();
         return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
       }
 
-      // Clamped normal sample
       function sampleValue(center, spread, min, max) {
-        const raw = center + boxMullerRandom() * spread;
+        var raw = center + boxMullerRandom() * spread;
         return Math.max(min, Math.min(max, raw));
-      }
-
-      // Format value with unicode minus and euro
-      function formatValue(num) {
-        const rounded = Math.round(num / 100) * 100;
-        const abs = Math.abs(rounded).toLocaleString();
-        if (rounded < 0) return '\u2212\u20AC' + abs;
-        return '+\u20AC' + abs;
       }
 
       function lerp(a, b, t) { return a + (b - a) * t; }
 
-      // Scenario config: center values, width %, value range
-      const scenarios = [
-        { centerVal: 3100, centerWidth: 78, minVal: 2200, maxVal: 4100, minW: 5, maxW: 98, alwaysPositive: true },
-        { centerVal: 1200, centerWidth: 42, minVal: 600,  maxVal: 1900, minW: 5, maxW: 98, alwaysPositive: true },
-        { centerVal: -1400, centerWidth: 62, minVal: -3200, maxVal: 800, minW: 5, maxW: 98, alwaysPositive: false },
-      ];
-
       function initLiveSim() {
-        const miniSim = document.querySelector('.mini-sim');
+        var miniSim = document.querySelector('.mini-sim');
         if (!miniSim) return;
 
-        const bars = miniSim.querySelectorAll('.sim-bar-fill');
-        const vals = miniSim.querySelectorAll('.sim-value');
+        var bars = miniSim.querySelectorAll('.sim-bar-fill');
+        var vals = miniSim.querySelectorAll('.sim-value');
         if (bars.length !== 3 || vals.length !== 3) return;
 
         // Kill CSS animations and pin current computed values
-        bars.forEach(bar => {
-          const currentWidth = getComputedStyle(bar).width;
+        bars.forEach(function(bar) {
+          var currentWidth = getComputedStyle(bar).width;
           bar.style.animation = 'none';
           bar.style.width = currentWidth;
         });
-        vals.forEach(val => {
+        vals.forEach(function(val) {
           val.style.animation = 'none';
           val.style.opacity = '1';
         });
 
-        let uncertaintyFactor = 0.3;
+        var uncertaintyFactor = 0.3;
 
         // Cursor-as-uncertainty-dial
         miniSim.addEventListener('mousemove', function(e) {
-          const rect = miniSim.getBoundingClientRect();
+          var rect = miniSim.getBoundingClientRect();
           uncertaintyFactor = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
         }, { passive: true });
 
@@ -1461,6 +1584,9 @@
         });
 
         function resample() {
+          var cfg = domains[activeDomain];
+          var scenarios = cfg.scenarios;
+
           scenarios.forEach(function(sc, i) {
             // Value spread scaled by uncertainty
             var valSpread = lerp(0.15, 0.35, uncertaintyFactor) * Math.abs(sc.centerVal || 1000);
@@ -1469,7 +1595,6 @@
             // Width: map value proportionally from value range to width range
             var valRange = sc.maxVal - sc.minVal;
             var valNorm = valRange > 0 ? (newVal - sc.minVal) / valRange : 0.5;
-            // Add width spread based on uncertainty
             var widthSpread = lerp(15, 35, uncertaintyFactor);
             var baseWidth = sc.minW + valNorm * (sc.maxW - sc.minW);
             var newWidth = sampleValue(baseWidth, widthSpread * 0.3, sc.minW, sc.maxW);
@@ -1491,7 +1616,7 @@
             // Crossfade value text via double-rAF
             var val = vals[i];
             val.style.opacity = '0.3';
-            var txt = formatValue(newVal);
+            var txt = cfg.formatValue(newVal);
             requestAnimationFrame(function() {
               requestAnimationFrame(function() {
                 val.textContent = txt;
@@ -1501,12 +1626,15 @@
           });
         }
 
+        // Expose resample for pill click handler
+        window.__prismaResample = resample;
+
         // IntersectionObserver: pause off-screen, resume on-screen
         var liveSimInterval = null;
         var liveSimObs = new IntersectionObserver(function(entries) {
           entries.forEach(function(entry) {
             if (entry.isIntersecting && !liveSimInterval) {
-              liveSimInterval = setInterval(resample, 2000);
+              liveSimInterval = setInterval(resample, 3000);
               window.__prismaAnimations[2] = liveSimInterval;
             } else if (!entry.isIntersecting && liveSimInterval) {
               clearInterval(liveSimInterval);
