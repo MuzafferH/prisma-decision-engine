@@ -277,6 +277,7 @@
       margin-bottom: 32px;
       opacity: 0;
       animation: fadeUp 0.6s var(--ease-out) 1.2s forwards;
+      transition: opacity 0.35s ease;
     }
     .sim-row {
       display: flex;
@@ -288,7 +289,7 @@
       font-size: 12px;
       font-weight: 500;
       color: var(--text2);
-      min-width: 100px;
+      min-width: 130px;
       text-align: right;
       transition: opacity 0.25s ease;
     }
@@ -304,8 +305,7 @@
       height: 100%;
       border-radius: 4px;
       width: 0;
-      transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1), background 0.6s ease;
-      will-change: width, background;
+      transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1), height 0.4s ease, margin-top 0.4s ease, border-radius 0.4s ease;
     }
     .sim-row:nth-child(1) .sim-bar-fill {
       background: linear-gradient(90deg, #2563eb, #3b82f6);
@@ -327,7 +327,7 @@
       font-family: var(--font-mono);
       font-size: 12px;
       font-weight: 700;
-      min-width: 60px;
+      min-width: 72px;
       text-align: left;
       opacity: 0;
       transition: opacity 0.15s ease, color 0.3s ease;
@@ -349,6 +349,7 @@
     .sim-pills {
       display: flex;
       gap: 8px;
+      align-items: center;
       margin-bottom: 12px;
       opacity: 0;
       animation: fadeUp 0.6s var(--ease-out) 1.0s forwards;
@@ -360,21 +361,61 @@
       letter-spacing: 0.02em;
       color: var(--text3);
       background: transparent;
-      border: 1px solid rgba(245, 192, 192, 0.28);
+      border: 1px solid rgba(245, 192, 192, 0.18);
       border-radius: 4px;
       padding: 4px 12px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .sim-pill:hover {
-      border-color: rgba(245, 192, 192, 0.5);
-      color: var(--text2);
+      cursor: default;
+      transition: all 0.4s ease;
+      opacity: 0.6;
     }
     .sim-pill.active {
-      background: rgba(245, 192, 192, 0.15);
+      background: rgba(245, 192, 192, 0.18);
       border-color: var(--rose);
       color: var(--text);
       font-weight: 600;
+      opacity: 1;
+      box-shadow: 0 0 0 2px rgba(227, 178, 179, 0.25);
+    }
+    .sim-pills-hint {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text3);
+      opacity: 0.5;
+      letter-spacing: 0.02em;
+      margin-left: 4px;
+    }
+
+    /* ====== MEDICINE DOMAIN: lollipop chart ====== */
+    .mini-sim.domain-medicine .sim-bar-track {
+      background: rgba(0, 0, 0, 0.02);
+    }
+    .mini-sim.domain-medicine .sim-bar-fill {
+      height: 3px;
+      margin-top: 9.5px;
+      border-radius: 2px;
+      position: relative;
+    }
+    .mini-sim.domain-medicine .sim-bar-fill::after {
+      content: '';
+      position: absolute;
+      right: -5px;
+      top: -4px;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: inherit;
+    }
+
+    /* ====== MARKETING DOMAIN: rounded pill bars ====== */
+    .mini-sim.domain-marketing .sim-bar-track {
+      height: 14px;
+      border-radius: 7px;
+      background: rgba(0, 0, 0, 0.03);
+    }
+    .mini-sim.domain-marketing .sim-bar-fill {
+      height: 14px;
+      border-radius: 7px;
+      opacity: 0.8;
     }
 
     /* ====== MINI SIM QUESTION + REALTIME LABEL ====== */
@@ -701,7 +742,7 @@
       .brand { font-size: clamp(3rem, 12vw, 5rem); }
       .tagline { font-size: 17px; }
       .mini-sim { max-width: 320px; }
-      .sim-label { min-width: 72px; font-size: 11px; }
+      .sim-label { min-width: 110px; font-size: 11px; }
       .cta { padding: 14px 28px; font-size: 15px; }
       .cta-static { padding: 18px 36px; font-size: 16px; }
 
@@ -772,11 +813,12 @@
       <!-- Accent line -->
       <div class="accent-line"></div>
 
-      <!-- Domain pills (clickable, no auto-rotation) -->
+      <!-- Domain pills (auto-rotating indicators, not clickable) -->
       <div class="sim-pills">
-        <button class="sim-pill active" data-domain="operations">Operations</button>
-        <button class="sim-pill" data-domain="medicine">Medicine</button>
-        <button class="sim-pill" data-domain="marketing">Marketing</button>
+        <span class="sim-pill active" data-domain="operations">Operations</span>
+        <span class="sim-pill" data-domain="medicine">Medicine</span>
+        <span class="sim-pill" data-domain="marketing">Marketing</span>
+        <span class="sim-pills-hint">&amp; any data</span>
       </div>
 
       <!-- Framing question (OUTSIDE .mini-sim to preserve nth-child selectors) -->
@@ -1434,220 +1476,148 @@
       document.querySelectorAll('.stat-block').forEach(b => proofObs.observe(b));
     })();
 
-    // ====== LIVE INTERACTIVE SIM BARS (multi-domain) ======
+    // ====== DOMAIN SHOWCASE (static, auto-rotating) ======
     (function() {
       var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      // ── Multi-domain scenario config ──
-      var domains = {
-        operations: {
+      // ── Static domain configs (fixed values, no sampling) ──
+      var domains = [
+        {
+          key: 'operations',
+          cssClass: '',
           question: '\u201CShould I hire two more drivers before Q3?\u201D',
-          labels: ['Hire in Q2', 'Raise prices', 'Expand market'],
-          scenarios: [
-            { centerVal: 3100, centerWidth: 78, minVal: 2200, maxVal: 4100, minW: 5, maxW: 98, alwaysPositive: true },
-            { centerVal: 1200, centerWidth: 42, minVal: 600, maxVal: 1900, minW: 5, maxW: 98, alwaysPositive: true },
-            { centerVal: -1400, centerWidth: 62, minVal: -3200, maxVal: 800, minW: 5, maxW: 98, alwaysPositive: false }
-          ],
-          formatValue: function(num) {
-            var rounded = Math.round(num / 100) * 100;
-            var abs = Math.abs(rounded).toLocaleString();
-            return (rounded < 0 ? '\u2212\u20AC' : '+\u20AC') + abs;
-          }
+          rows: [
+            { label: 'Hire in Q2',      width: 78, value: '+\u20AC3,100', color: '#10B981' },
+            { label: 'Raise prices',    width: 42, value: '+\u20AC1,200', color: '#10B981' },
+            { label: 'Expand market',   width: 62, value: '\u2212\u20AC1,400', color: '#EF4444' }
+          ]
         },
-        medicine: {
+        {
+          key: 'medicine',
+          cssClass: 'domain-medicine',
           question: '\u201CShould we switch to the new treatment protocol?\u201D',
-          labels: ['New protocol', 'Keep current', 'Hybrid approach'],
-          scenarios: [
-            { centerVal: 14, centerWidth: 78, minVal: 8, maxVal: 22, minW: 5, maxW: 98, alwaysPositive: true },
-            { centerVal: 6, centerWidth: 42, minVal: 2, maxVal: 11, minW: 5, maxW: 98, alwaysPositive: true },
-            { centerVal: -3, centerWidth: 62, minVal: -12, maxVal: 5, minW: 5, maxW: 98, alwaysPositive: false }
-          ],
-          formatValue: function(num) {
-            var rounded = Math.round(num);
-            return (rounded < 0 ? '\u2212' : '+') + Math.abs(rounded) + '%';
-          }
+          rows: [
+            { label: 'New protocol',     width: 72, value: '+14%',  color: '#10B981' },
+            { label: 'Keep current',     width: 38, value: '+6%',   color: '#10B981' },
+            { label: 'Hybrid approach',  width: 55, value: '\u22123%',   color: '#EF4444' }
+          ]
         },
-        marketing: {
+        {
+          key: 'marketing',
+          cssClass: 'domain-marketing',
           question: '\u201CShould we double our ad spend for Black Friday?\u201D',
-          labels: ['Double spend', 'Reallocate budget', 'Hold steady'],
-          scenarios: [
-            { centerVal: 28000, centerWidth: 78, minVal: 18000, maxVal: 41000, minW: 5, maxW: 98, alwaysPositive: true },
-            { centerVal: 12000, centerWidth: 42, minVal: 5000, maxVal: 19000, minW: 5, maxW: 98, alwaysPositive: true },
-            { centerVal: -8000, centerWidth: 62, minVal: -22000, maxVal: 6000, minW: 5, maxW: 98, alwaysPositive: false }
-          ],
-          formatValue: function(num) {
-            var rounded = Math.round(num / 100) * 100;
-            var abs = '$' + Math.abs(rounded).toLocaleString();
-            return (rounded < 0 ? '\u2212' : '+') + abs;
-          }
+          rows: [
+            { label: 'Double spend',       width: 74, value: '+$28,000', color: '#10B981' },
+            { label: 'Reallocate budget',  width: 40, value: '+$12,000', color: '#10B981' },
+            { label: 'Hold steady',        width: 58, value: '\u2212$8,000',  color: '#EF4444' }
+          ]
         }
-      };
+      ];
 
-      var activeDomain = 'operations';
-
-      // ── Pill click handler (works even with reduced motion) ──
+      var currentIndex = 0;
+      var miniSim = document.querySelector('.mini-sim');
+      var questionEl = document.querySelector('.sim-question');
+      var emEl = questionEl ? questionEl.querySelector('em') : null;
       var pillBar = document.querySelector('.sim-pills');
-      if (pillBar) {
-        pillBar.addEventListener('click', function(e) {
-          var pill = e.target.closest('.sim-pill');
-          if (!pill || pill.classList.contains('active')) return;
-          var domain = pill.getAttribute('data-domain');
-          if (!domains[domain]) return;
+      var pills = pillBar ? pillBar.querySelectorAll('.sim-pill') : [];
+      var bars, vals, labels;
 
-          // Update active pill
-          pillBar.querySelector('.sim-pill.active').classList.remove('active');
-          pill.classList.add('active');
-          activeDomain = domain;
+      if (miniSim) {
+        bars = miniSim.querySelectorAll('.sim-bar-fill');
+        vals = miniSim.querySelectorAll('.sim-value');
+        labels = miniSim.querySelectorAll('.sim-label');
+      }
 
-          var cfg = domains[domain];
-          var questionEl = document.querySelector('.sim-question');
-          var emEl = questionEl ? questionEl.querySelector('em') : null;
-          var labelEls = document.querySelectorAll('.sim-label');
+      function applyDomain(idx, animate) {
+        var cfg = domains[idx];
 
-          if (prefersReducedMotion) {
-            // Instant swap, no crossfade
-            if (emEl) emEl.textContent = cfg.question;
-            labelEls.forEach(function(el, i) { el.textContent = cfg.labels[i]; });
-            if (typeof window.__prismaResample === 'function') window.__prismaResample();
-            return;
-          }
+        // Update pills
+        pills.forEach(function(p, i) {
+          if (i === idx) p.classList.add('active');
+          else p.classList.remove('active');
+        });
 
-          // Crossfade question: fade out, swap text, fade in
-          if (questionEl && emEl) {
-            questionEl.style.opacity = '0';
-            setTimeout(function() {
-              emEl.textContent = cfg.question;
-              questionEl.style.opacity = '';
-            }, 250);
-          }
+        // Update CSS class on mini-sim for chart style
+        miniSim.className = 'mini-sim' + (cfg.cssClass ? ' ' + cfg.cssClass : '');
 
-          // Crossfade labels
-          labelEls.forEach(function(el, i) {
-            el.style.opacity = '0';
-            setTimeout(function() {
-              el.textContent = cfg.labels[i];
-              el.style.opacity = '';
-            }, 250);
+        if (!animate || prefersReducedMotion) {
+          // Instant swap
+          if (emEl) emEl.textContent = cfg.question;
+          cfg.rows.forEach(function(row, i) {
+            if (labels[i]) labels[i].textContent = row.label;
+            if (bars[i]) bars[i].style.width = row.width + '%';
+            if (vals[i]) {
+              vals[i].textContent = row.value;
+              vals[i].style.color = row.color;
+            }
+          });
+          return;
+        }
+
+        // Crossfade: fade out question + mini-sim
+        if (questionEl) questionEl.style.opacity = '0';
+        miniSim.style.opacity = '0';
+
+        setTimeout(function() {
+          // Swap content while invisible
+          if (emEl) emEl.textContent = cfg.question;
+          cfg.rows.forEach(function(row, i) {
+            if (labels[i]) labels[i].textContent = row.label;
+            if (bars[i]) {
+              bars[i].style.animation = 'none';
+              bars[i].style.width = row.width + '%';
+            }
+            if (vals[i]) {
+              vals[i].style.animation = 'none';
+              vals[i].style.opacity = '1';
+              vals[i].textContent = row.value;
+              vals[i].style.color = row.color;
+            }
           });
 
-          // Trigger immediate resample so bars update on click
-          if (typeof window.__prismaResample === 'function') window.__prismaResample();
-        });
+          // Fade back in
+          if (questionEl) questionEl.style.opacity = '';
+          miniSim.style.opacity = '1';
+        }, 350);
       }
 
-      if (prefersReducedMotion) return;
+      // Initialize first domain after CSS entrance animations complete
+      function initShowcase() {
+        if (!miniSim || !bars || bars.length !== 3) return;
 
-      // ── Sampling utilities ──
-      function boxMullerRandom() {
-        var u = 0, v = 0;
-        while (u === 0) u = Math.random();
-        while (v === 0) v = Math.random();
-        return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
-      }
-
-      function sampleValue(center, spread, min, max) {
-        var raw = center + boxMullerRandom() * spread;
-        return Math.max(min, Math.min(max, raw));
-      }
-
-      function lerp(a, b, t) { return a + (b - a) * t; }
-
-      function initLiveSim() {
-        var miniSim = document.querySelector('.mini-sim');
-        if (!miniSim) return;
-
-        var bars = miniSim.querySelectorAll('.sim-bar-fill');
-        var vals = miniSim.querySelectorAll('.sim-value');
-        if (bars.length !== 3 || vals.length !== 3) return;
-
-        // Kill CSS animations and pin current computed values
+        // Kill CSS entrance animations, pin current values
         bars.forEach(function(bar) {
-          var currentWidth = getComputedStyle(bar).width;
+          var w = getComputedStyle(bar).width;
           bar.style.animation = 'none';
-          bar.style.width = currentWidth;
+          bar.style.width = w;
         });
         vals.forEach(function(val) {
           val.style.animation = 'none';
           val.style.opacity = '1';
         });
 
-        var uncertaintyFactor = 0.3;
-
-        // Cursor-as-uncertainty-dial
-        miniSim.addEventListener('mousemove', function(e) {
-          var rect = miniSim.getBoundingClientRect();
-          uncertaintyFactor = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        }, { passive: true });
-
-        miniSim.addEventListener('mouseleave', function() {
-          uncertaintyFactor = 0.3;
-        });
-
-        function resample() {
-          var cfg = domains[activeDomain];
-          var scenarios = cfg.scenarios;
-
-          scenarios.forEach(function(sc, i) {
-            // Value spread scaled by uncertainty
-            var valSpread = lerp(0.15, 0.35, uncertaintyFactor) * Math.abs(sc.centerVal || 1000);
-            var newVal = sampleValue(sc.centerVal, valSpread, sc.minVal, sc.maxVal);
-
-            // Width: map value proportionally from value range to width range
-            var valRange = sc.maxVal - sc.minVal;
-            var valNorm = valRange > 0 ? (newVal - sc.minVal) / valRange : 0.5;
-            var widthSpread = lerp(15, 35, uncertaintyFactor);
-            var baseWidth = sc.minW + valNorm * (sc.maxW - sc.minW);
-            var newWidth = sampleValue(baseWidth, widthSpread * 0.3, sc.minW, sc.maxW);
-
-            // Set bar width
-            bars[i].style.width = newWidth + '%';
-
-            // Bar 3: flip green when positive
-            if (i === 2) {
-              if (newVal > 0) {
-                bars[2].style.background = 'linear-gradient(90deg, #10B981, #34D399)';
-                vals[2].style.color = '#10B981';
-              } else {
-                bars[2].style.removeProperty('background');
-                vals[2].style.color = '#EF4444';
-              }
-            }
-
-            // Crossfade value text via double-rAF
-            var val = vals[i];
-            val.style.opacity = '0.3';
-            var txt = cfg.formatValue(newVal);
-            requestAnimationFrame(function() {
-              requestAnimationFrame(function() {
-                val.textContent = txt;
-                val.style.opacity = '1';
-              });
-            });
-          });
-        }
-
-        // Expose resample for pill click handler
-        window.__prismaResample = resample;
-
-        // IntersectionObserver: pause off-screen, resume on-screen
-        var liveSimInterval = null;
-        var liveSimObs = new IntersectionObserver(function(entries) {
+        // Auto-rotate every 4.5s
+        var rotationInterval = null;
+        var simObs = new IntersectionObserver(function(entries) {
           entries.forEach(function(entry) {
-            if (entry.isIntersecting && !liveSimInterval) {
-              liveSimInterval = setInterval(resample, 3000);
-              window.__prismaAnimations[2] = liveSimInterval;
-            } else if (!entry.isIntersecting && liveSimInterval) {
-              clearInterval(liveSimInterval);
-              liveSimInterval = null;
+            if (entry.isIntersecting && !rotationInterval) {
+              rotationInterval = setInterval(function() {
+                currentIndex = (currentIndex + 1) % domains.length;
+                applyDomain(currentIndex, true);
+              }, 4500);
+              window.__prismaAnimations[2] = rotationInterval;
+            } else if (!entry.isIntersecting && rotationInterval) {
+              clearInterval(rotationInterval);
+              rotationInterval = null;
               window.__prismaAnimations[2] = null;
             }
           });
         }, { threshold: 0 });
-        liveSimObs.observe(miniSim);
+        simObs.observe(miniSim);
       }
 
-      // Start after initial CSS animations complete (last bar finishes at ~2.4s)
-      setTimeout(initLiveSim, 2500);
+      // Start after CSS entrance animations (last bar at ~2.4s)
+      setTimeout(initShowcase, 2500);
     })();
   </script>
 

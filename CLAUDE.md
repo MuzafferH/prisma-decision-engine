@@ -42,12 +42,13 @@ api/system-prompt.js         ← System prompt (Prisma's behavior instructions)
 - **Chat panel:** 25% width, 13px font — dashboard gets 75%
 
 ### Landing Page (index.html)
-The landing page has 4 interactive visual systems, all implemented as inline `<script>` blocks (except button-particles.js):
+The landing page has 5 interactive visual systems, all implemented as inline `<script>` blocks (except button-particles.js):
 
 1. **Dot grid canvas** — `#dot-grid-canvas`, fixed full-viewport, 20px spacing, mouse interaction (scale+color shift)
 2. **CTA buttons** — `PrismaButtonParticles` class in `button-particles.js`, hero (14 dots) + footer (18 dots, deferred)
 3. **Cascade section** — 3 canvases ("Your data → 1,000 simulations → Your answer"), looping scatter→histogram→bell animation
 4. **Proof count-up** — `data-count-target` attribute, easeOutExpo counter + orbiting rose dot
+5. **Domain pill bar** — 3 clickable pills (Operations/Medicine/Marketing) above `.sim-question`. Switches question, labels, values, and bar behavior via `domains` config object. Each domain has its own `formatValue()` (€/$/%). Pill click triggers immediate `resample()` via `window.__prismaResample`. No auto-rotation (carousel anti-pattern). Resample interval: 3s. `prefers-reduced-motion`: instant text swap, no crossfade.
 
 **Animation lifecycle:** `window.__prismaAnimations[]` (rAF IDs at fixed indices) + `window.__prismaParticles[]` (button instances). CTA click handler cancels all before fade-out. `prefers-reduced-motion` disables everything.
 
