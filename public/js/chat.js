@@ -199,8 +199,8 @@ Chat.sendMessage = async function() {
         this.onDashboardUpdate(response.toolCall);
       }
 
-      // If stopReason is tool_use, the model expects a continuation
-      if (response.stopReason === 'tool_use') {
+      // If tool call exists and stopReason indicates completion, add to history and continue
+      if (response.toolCall && (response.stopReason === 'tool_use' || response.stopReason === 'end_turn')) {
         // Add the assistant's response with tool_use to messages
         this.messages.push({
           role: 'assistant',
@@ -320,7 +320,7 @@ Chat.sendFollowUp = async function() {
       }
 
       // Check if we need another continuation
-      if (response.stopReason === 'tool_use') {
+      if (response.toolCall && (response.stopReason === 'tool_use' || response.stopReason === 'end_turn')) {
         this.messages.push({
           role: 'assistant',
           content: [
@@ -547,6 +547,19 @@ Chat.handleCSVUpload = async function(file) {
 
   this.displayMessage('system', `Analyzing ${file.name}...`);
 
+  // Reset analysis state for new CSV upload
+  if (typeof Dashboard !== 'undefined') {
+    Dashboard._dataOverviewRendered = false;
+    Dashboard._analysisCounter = 0;
+    Dashboard.analysisHistory = [];
+    const analysisHistory = document.getElementById('analysis-history');
+    if (analysisHistory) {
+      const plots = analysisHistory.querySelectorAll('.chart-plot');
+      plots.forEach(function(p) { try { Plotly.purge(p); } catch(e) {} });
+      analysisHistory.textContent = '';
+    }
+  }
+
   // Show skeleton loading in dashboard immediately
   if (typeof Dashboard !== 'undefined' && Dashboard.showSkeletonLoading) {
     Dashboard.showSkeletonLoading();
@@ -705,8 +718,21 @@ Chat.triggerSimulation = function(prompt) {
   // Store the simulation label so we can show it in the teaser
   Dashboard._lastSimulationPrompt = prompt;
   this._forceSimulation = true;
+
+  // Enrich prompt with CSV column statistics so Claude uses exact column names
+  let enrichedPrompt = prompt;
+  if (typeof Dashboard !== 'undefined' && Dashboard._csvAnalysis) {
+    const cols = Dashboard._csvAnalysis.columns || [];
+    const numericCols = cols.filter(c => c.type === 'numeric').map(c =>
+      `${c.name}: mean=${c.mean?.toFixed(2)}, min=${c.min}, max=${c.max}`
+    ).join('; ');
+    if (numericCols) {
+      enrichedPrompt += '\n\n[SIMULATION CONTEXT — use these exact column names as variable IDs: ' + numericCols + ']';
+    }
+  }
+
   const chatInput = document.getElementById('chat-input');
-  if (chatInput) chatInput.value = prompt;
+  if (chatInput) chatInput.value = enrichedPrompt;
   this.sendMessage();
 };
 

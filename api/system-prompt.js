@@ -96,6 +96,13 @@ When the user clicks "Simulate this" on an insight card, or types a what-if ques
 
 **You MUST call update_dashboard with phase "simulation".** Do NOT answer simulation questions with text only — ALWAYS use the tool. The user expects the Full Analysis panel on the right side. A text-only response means the simulation feature appears broken.
 
+CRITICAL: When the simulation prompt contains [SIMULATION CONTEXT — use these exact column names...], you MUST:
+1. Use the listed column names EXACTLY as variable IDs (e.g., if column is "delivery_duration_avg", use id: "delivery_duration_avg")
+2. Include ALL required fields: variables, edges, scenarios (with "Do Nothing"), outcome (with formula)
+3. The outcome formula MUST use the exact variable IDs from your variables array
+4. NEVER omit edges — include at least one causal relationship
+If you omit any required field, the simulation engine will reject your response and retry.
+
 **Required fields in prismaData:**
 
 1. **variables** — Calibrated from the REAL data

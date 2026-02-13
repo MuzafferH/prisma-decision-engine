@@ -405,7 +405,54 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // 5b. Server-side formula validation + retry-with-hint
+    // 5b. Server-side required-fields validation for simulation phase
+    if (toolCall?.input?.phase === 'simulation' && toolCall?.input?.prismaData) {
+      const pd = toolCall.input.prismaData;
+      const missing = [];
+      if (!pd.variables || !Array.isArray(pd.variables) || pd.variables.length === 0) missing.push('variables');
+      if (!pd.scenarios || !Array.isArray(pd.scenarios) || pd.scenarios.length === 0) missing.push('scenarios');
+      if (!pd.outcome || !pd.outcome.formula) missing.push('outcome with formula');
+      if (!pd.edges || !Array.isArray(pd.edges)) missing.push('edges');
+
+      if (missing.length > 0 && !toolCall.input._retried) {
+        console.log('[Simulation Validation] Missing fields:', missing.join(', '), '— retrying...');
+        try {
+          const retryMessages = [...messages, {
+            role: 'assistant',
+            content: [
+              ...(message ? [{ type: 'text', text: message }] : []),
+              { type: 'tool_use', id: toolCall.id, name: toolCall.name, input: toolCall.input }
+            ]
+          }, {
+            role: 'user',
+            content: [{ type: 'tool_result', tool_use_id: toolCall.id, content: `VALIDATION ERROR: Missing required fields: ${missing.join(', ')}. You MUST include ALL of: variables (array), scenarios (array with "Do Nothing"), outcome (object with formula using exact variable IDs), edges (array of causal relationships). Retry now.` }]
+          }];
+
+          const retryResponse = await client.messages.create({
+            model: 'claude-opus-4-20250514',
+            max_tokens: 8000,
+            system: SYSTEM_PROMPT,
+            messages: retryMessages,
+            tools: tools,
+            tool_choice: { type: 'tool', name: 'update_dashboard' }
+          });
+
+          let retryMessage = '';
+          for (const block of retryResponse.content) {
+            if (block.type === 'text') retryMessage += block.text;
+            if (block.type === 'tool_use' && block.name === 'update_dashboard') {
+              toolCall = { id: block.id, name: block.name, input: { ...block.input, _retried: true } };
+            }
+          }
+          if (retryMessage) message = retryMessage;
+          console.log('[Simulation Validation] Retry complete');
+        } catch (retryError) {
+          console.error('[Simulation Validation] Retry failed:', retryError.message);
+        }
+      }
+    }
+
+    // 5c. Server-side formula validation + retry-with-hint
     if (toolCall?.input?.prismaData) {
       const pd = toolCall.input.prismaData;
       const validation = validateFormulaAgainstVariables(pd);

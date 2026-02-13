@@ -44,6 +44,7 @@ const ChartRenderer = {
    */
   renderDataOverview(prismaData, csvData, csvAnalysis) {
     if (!prismaData) return;
+    this._clearLoadingFacts();
 
     if (prismaData.dataSummary) {
       this.renderSummaryCard(prismaData.dataSummary);
@@ -63,7 +64,36 @@ const ChartRenderer = {
     }
   },
 
+  /**
+   * Render data overview into specific containers (for analysis cards).
+   * Does NOT touch the main page containers.
+   */
+  renderDataOverviewInto(prismaData, csvData, kpiContainer, chartContainer, insightsContainer) {
+    if (!prismaData) return;
+    this._clearLoadingFacts();
+
+    if (prismaData.kpiCards) {
+      this.renderKPICardsInto(prismaData.kpiCards, kpiContainer);
+    }
+    if (prismaData.charts && csvData) {
+      this.renderChartsInto(prismaData.charts, csvData, chartContainer);
+    }
+    if (prismaData.insights) {
+      this.renderInsightsInto(prismaData.insights, insightsContainer);
+    }
+  },
+
   // ==================== SKELETON LOADING ====================
+
+  _loadingFacts: [
+    'Carlo runs 1,000 randomized futures for every scenario you test.',
+    'Nassim classifies your decision as Fragile, Robust, or Antifragile.',
+    'Prisma was built in 48 hours for the Anthropic Claude Code Hackathon.',
+    'The tornado diagram shows which variable swings your outcome the most.',
+    'Every chart is computed from YOUR data \u2014 Claude only provides the spec.',
+    'Prisma uses Monte Carlo simulation \u2014 the same math that prices stock options.'
+  ],
+  _loadingFactInterval: null,
 
   renderSkeletonLoading() {
     const overview = document.getElementById('data-overview');
@@ -107,15 +137,73 @@ const ChartRenderer = {
       }
     }
 
-    // Chart skeletons
+    // Chart area: replace skeletons with fact display + dot flow animation
     const chartGrid = document.getElementById('chart-grid');
     if (chartGrid) {
       chartGrid.textContent = '';
-      for (let i = 0; i < 4; i++) {
-        const card = document.createElement('div');
-        card.className = 'chart-card skeleton-loading';
-        chartGrid.appendChild(card);
+
+      const factCard = document.createElement('div');
+      factCard.className = 'skeleton-fact-card';
+
+      // Dot flow animation
+      const flow = document.createElement('div');
+      flow.className = 'skeleton-fact-flow';
+
+      const labelLeft = document.createElement('span');
+      labelLeft.className = 'flow-label';
+      labelLeft.textContent = 'Your data';
+      flow.appendChild(labelLeft);
+
+      const dots = document.createElement('div');
+      dots.className = 'flow-dots';
+      for (let i = 0; i < 5; i++) {
+        const dot = document.createElement('span');
+        dot.className = 'flow-dot';
+        dot.style.animationDelay = (i * 0.4) + 's';
+        dots.appendChild(dot);
       }
+      flow.appendChild(dots);
+
+      const labelRight = document.createElement('span');
+      labelRight.className = 'flow-label';
+      labelRight.textContent = 'Your answer';
+      flow.appendChild(labelRight);
+
+      factCard.appendChild(flow);
+
+      // Rotating fact text
+      const factText = document.createElement('div');
+      factText.className = 'skeleton-fact-text';
+      factText.id = 'skeleton-fact-text';
+      const randomIndex = Math.floor(Math.random() * this._loadingFacts.length);
+      factText.textContent = this._loadingFacts[randomIndex];
+      factCard.appendChild(factText);
+
+      chartGrid.appendChild(factCard);
+
+      // Rotate facts every 2.5s
+      this._clearLoadingFacts();
+      let currentIdx = randomIndex;
+      this._loadingFactInterval = setInterval(() => {
+        const el = document.getElementById('skeleton-fact-text');
+        if (!el) { this._clearLoadingFacts(); return; }
+        el.style.opacity = '0';
+        setTimeout(() => {
+          currentIdx = (currentIdx + 1) % this._loadingFacts.length;
+          el.textContent = this._loadingFacts[currentIdx];
+          el.style.opacity = '1';
+        }, 300);
+      }, 2500);
+    }
+  },
+
+  /**
+   * Clear the loading facts rotation interval
+   */
+  _clearLoadingFacts() {
+    if (this._loadingFactInterval) {
+      clearInterval(this._loadingFactInterval);
+      this._loadingFactInterval = null;
     }
   },
 
@@ -218,6 +306,50 @@ const ChartRenderer = {
   },
 
   /**
+   * Render KPI cards into a specific container (for analysis cards)
+   */
+  renderKPICardsInto(kpiCards, container) {
+    if (!container) return;
+    container.textContent = '';
+
+    kpiCards.forEach((kpi, index) => {
+      const valStr = String(kpi.value || '').trim();
+      const digitCount = (valStr.match(/\d/g) || []).length;
+      const letterCount = (valStr.match(/[a-zA-Z]/g) || []).length;
+      if (digitCount === 0 || letterCount > digitCount * 3) return;
+
+      const card = document.createElement('div');
+      card.className = 'kpi-card';
+
+      if (kpi.trend) {
+        const trend = document.createElement('span');
+        trend.className = 'kpi-trend ' + (kpi.trend === 'up' ? 'negative' : kpi.trend === 'down' ? 'positive' : 'neutral');
+        trend.textContent = kpi.trend === 'up' ? '\u2191' : kpi.trend === 'down' ? '\u2193' : '\u2192';
+        card.appendChild(trend);
+      }
+
+      const value = document.createElement('div');
+      value.className = 'kpi-value';
+      value.textContent = kpi.value || '\u2014';
+      card.appendChild(value);
+
+      const label = document.createElement('div');
+      label.className = 'kpi-label';
+      label.textContent = kpi.label || '';
+      card.appendChild(label);
+
+      if (kpi.context) {
+        const context = document.createElement('div');
+        context.className = 'kpi-context';
+        context.textContent = kpi.context;
+        card.appendChild(context);
+      }
+
+      container.appendChild(card);
+    });
+  },
+
+  /**
    * Count-up animation for KPI values
    */
   _countUp(element, start, end, duration, prefix, suffix) {
@@ -286,6 +418,100 @@ const ChartRenderer = {
         card.style.opacity = '1';
         card.style.transform = 'translateY(0)';
       }, index * 150);
+    });
+  },
+
+  /**
+   * Render charts into a specific container (for analysis cards)
+   */
+  renderChartsInto(chartSpecs, csvData, container) {
+    if (!container) return;
+    container.textContent = '';
+    const columnNames = Object.keys(csvData[0] || {});
+    const idPrefix = 'chart-plot-a' + (Dashboard?._analysisCounter || 0) + '-';
+
+    chartSpecs.forEach((spec, index) => {
+      const card = document.createElement('div');
+      card.className = 'chart-card';
+
+      const title = document.createElement('div');
+      title.className = 'chart-card-title';
+      title.textContent = spec.title || 'Chart';
+      card.appendChild(title);
+
+      const plotContainer = document.createElement('div');
+      plotContainer.className = 'chart-plot';
+      plotContainer.id = idPrefix + (spec.id || index);
+      card.appendChild(plotContainer);
+
+      container.appendChild(card);
+
+      setTimeout(() => {
+        const validated = this.validateChartSpec(spec, columnNames);
+        if (validated) {
+          this.renderChart(validated, csvData, plotContainer);
+        }
+      }, index * 100);
+    });
+  },
+
+  /**
+   * Render insights into a specific container (for analysis cards)
+   */
+  renderInsightsInto(insights, container) {
+    if (!container) return;
+    container.textContent = '';
+
+    insights.forEach(insight => {
+      const card = document.createElement('div');
+      card.className = 'insight-card';
+      card.setAttribute('data-type', insight.type || 'pattern');
+
+      const badge = document.createElement('span');
+      badge.className = 'insight-card-badge';
+      badge.textContent = (insight.type || 'pattern').toUpperCase();
+      card.appendChild(badge);
+
+      if (insight.severity) {
+        const severity = document.createElement('span');
+        severity.className = 'insight-severity ' + insight.severity;
+        severity.textContent = 'Impact: ' + insight.severity.charAt(0).toUpperCase() + insight.severity.slice(1);
+        card.appendChild(severity);
+      }
+
+      const title = document.createElement('div');
+      title.className = 'insight-title';
+      title.textContent = insight.title || '';
+      card.appendChild(title);
+
+      const desc = document.createElement('div');
+      desc.className = 'insight-description';
+      desc.textContent = insight.description || '';
+      card.appendChild(desc);
+
+      if (insight.simulatable && insight.simulationPrompt) {
+        const actions = document.createElement('div');
+        actions.className = 'insight-actions';
+
+        const simBtn = document.createElement('button');
+        simBtn.className = 'simulate-btn';
+        simBtn.textContent = 'Simulate this';
+        const arrow = document.createElement('span');
+        arrow.className = 'arrow';
+        arrow.textContent = ' \u2192';
+        simBtn.appendChild(arrow);
+        simBtn.addEventListener('click', () => {
+          card.classList.add('simulating');
+          setTimeout(() => card.classList.remove('simulating'), 600);
+          if (typeof Chat !== 'undefined') {
+            Chat.triggerSimulation(insight.simulationPrompt);
+          }
+        });
+        actions.appendChild(simBtn);
+        card.appendChild(actions);
+      }
+
+      container.appendChild(card);
     });
   },
 

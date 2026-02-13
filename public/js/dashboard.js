@@ -52,7 +52,12 @@ const Dashboard = {
   // --- Simulation History (stacking cards) ---
   simulationHistory: [],          // Array of simulation snapshots
   _simCounter: 0,                 // Auto-increment ID
-  _maxSimulations: 10             // Memory cap — evict oldest beyond this
+  _maxSimulations: 10,            // Memory cap — evict oldest beyond this
+
+  // --- Analysis History (stacking cards for follow-up questions) ---
+  analysisHistory: [],            // Array of analysis snapshots
+  _analysisCounter: 0,            // Auto-increment ID
+  _maxAnalyses: 10                // Memory cap — evict oldest beyond this
 };
 
 /**
@@ -272,7 +277,7 @@ Dashboard.handleToolCall = function(toolCall) {
     Dashboard.prismaState.variables = null;
     Dashboard.prismaState.scenarios = null;
     Dashboard.prismaState.outcome = null;
-    Dashboard.prismaState.edges = null;
+    Dashboard.prismaState.edges = [];
     Dashboard.prismaState.recommendation = null;
   }
 
@@ -369,10 +374,26 @@ Dashboard.activateForPhase = function(phase) {
     }
 
     if (phase === 'simulation') {
+      const state = Dashboard.prismaState;
       const prevCount = Dashboard._simCounter;
+      const hasMissing = !state.variables || !state.scenarios || !state.outcome;
+
       Dashboard.runSimulation();
+
       if (Dashboard._simCounter > prevCount) {
         Dashboard._createSimCard();
+      } else {
+        // Diagnose the failure and show a failed card with retry
+        const diagnostic = hasMissing
+          ? 'Missing simulation data — variables, scenarios, or outcome formula not provided'
+          : (Dashboard.carloResults && Dashboard._checkAllZeroOutcomes(Dashboard.carloResults))
+            ? 'Formula produced no variation — variable names may not match the data'
+            : 'Simulation engine encountered an error';
+
+        Dashboard._createFailedSimCard(
+          Dashboard._lastSimulationPrompt || 'Simulation',
+          diagnostic
+        );
       }
       return;
     }
@@ -615,10 +636,6 @@ Dashboard.runSimulation = function() {
       scenarios: !!state.scenarios,
       outcome: !!state.outcome
     });
-    if (typeof Chat !== 'undefined') {
-      Chat.displayMessage('assistant',
-        'I need more information to run this simulation. Could you rephrase your question or provide more detail about what you want to test?');
-    }
     return;
   }
 
@@ -634,10 +651,6 @@ Dashboard.runSimulation = function() {
     if (allZero) {
       console.warn('[All-Zero Detection] All scenarios produced zero outcomes — formula likely broken');
       Dashboard._showFormulaWarning();
-      if (typeof Chat !== 'undefined') {
-        Chat.displayMessage('assistant',
-          'The simulation produced no meaningful results \u2014 the formula may not match the data. Try rephrasing or ask me to adjust the model.');
-      }
       return;
     } else {
       Dashboard._hideFormulaWarning();
@@ -1482,13 +1495,26 @@ Dashboard.showDataOverview = function() {
   if (dormant) dormant.style.display = 'none';
   if (dataOverview) dataOverview.style.display = 'block';
 
-  if (Dashboard.prismaState && Dashboard._csvData && typeof ChartRenderer !== 'undefined') {
+  if (!Dashboard.prismaState || !Dashboard._csvData || typeof ChartRenderer === 'undefined') return;
+
+  if (!Dashboard._dataOverviewRendered) {
+    // FIRST: render into main containers (existing behavior)
     ChartRenderer.renderDataOverview(
       Dashboard.prismaState,
       Dashboard._csvData,
       Dashboard._csvAnalysis
     );
     Dashboard._dataOverviewRendered = true;
+  } else {
+    // SUBSEQUENT: create expandable analysis card instead of wiping the dashboard
+    const lastUserMsg = (typeof Chat !== 'undefined' && Chat.messages.length > 0)
+      ? Chat.messages.filter(m => m.role === 'user').pop()
+      : null;
+    const questionText = (typeof lastUserMsg?.content === 'string')
+      ? lastUserMsg.content
+      : (Array.isArray(lastUserMsg?.content) ? lastUserMsg.content.find(b => b.type === 'text')?.text : null);
+    const label = questionText || Dashboard.prismaState?.dataSummary?.description || 'Follow-up Analysis';
+    Dashboard._createAnalysisCard(label);
   }
 };
 
@@ -1601,6 +1627,191 @@ Dashboard._createSimCard = function() {
 
   // Scroll card into view
   card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+/**
+ * Create a failed simulation card with diagnostic info and retry button.
+ * Shown when the simulation engine couldn't produce results.
+ */
+Dashboard._createFailedSimCard = function(label, diagnostic) {
+  const historyContainer = document.getElementById('simulation-history');
+  if (!historyContainer) return;
+
+  const card = document.createElement('div');
+  card.className = 'sim-card sim-card-failed';
+
+  const teaser = document.createElement('div');
+  teaser.className = 'simulation-teaser';
+
+  const teaserContent = document.createElement('div');
+  teaserContent.className = 'teaser-content';
+
+  const labelEl = document.createElement('span');
+  labelEl.className = 'teaser-label';
+  labelEl.textContent = label || 'Simulation';
+
+  const scoreEl = document.createElement('span');
+  scoreEl.className = 'teaser-score';
+  scoreEl.textContent = diagnostic || 'Simulation could not complete';
+
+  teaserContent.appendChild(labelEl);
+  teaserContent.appendChild(scoreEl);
+
+  const retryBtn = document.createElement('button');
+  retryBtn.className = 'full-analysis-btn';
+  retryBtn.textContent = 'Retry';
+  retryBtn.addEventListener('click', () => {
+    card.remove();
+    if (typeof Chat !== 'undefined') {
+      Chat.triggerSimulation(label);
+    }
+  });
+
+  teaser.appendChild(teaserContent);
+  teaser.appendChild(retryBtn);
+  card.appendChild(teaser);
+
+  historyContainer.prepend(card);
+
+  // Chat notification
+  if (typeof Chat !== 'undefined') {
+    Chat.displayMessage('assistant', 'The simulation couldn\u2019t complete \u2014 ' + diagnostic.toLowerCase() + '. Click \u201cRetry\u201d on the card to try again.');
+  }
+
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+/**
+ * Create an analysis card for follow-up data_overview responses.
+ * Preserves the original dashboard and stacks new analyses as expandable cards.
+ */
+Dashboard._createAnalysisCard = function(label) {
+  const historyContainer = document.getElementById('analysis-history');
+  if (!historyContainer) return;
+
+  Dashboard._analysisCounter++;
+  const aId = Dashboard._analysisCounter;
+
+  // Snapshot current prisma state for this analysis
+  const state = Dashboard.prismaState;
+  const snapshot = JSON.parse(JSON.stringify({
+    kpiCards: state.kpiCards,
+    charts: state.charts,
+    insights: state.insights,
+    dataSummary: state.dataSummary
+  }));
+
+  const entry = {
+    id: aId,
+    timestamp: Date.now(),
+    label: label,
+    prismaData: snapshot,
+    expanded: true
+  };
+
+  // Evict oldest if at memory cap
+  if (Dashboard.analysisHistory.length >= Dashboard._maxAnalyses) {
+    const evicted = Dashboard.analysisHistory.shift();
+    const evictedCard = document.querySelector('.analysis-card[data-analysis-id="' + evicted.id + '"]');
+    if (evictedCard) {
+      const plots = evictedCard.querySelectorAll('.chart-plot');
+      plots.forEach(function(p) { try { Plotly.purge(p); } catch(e) {} });
+      evictedCard.remove();
+    }
+  }
+
+  Dashboard.analysisHistory.push(entry);
+
+  // Build card DOM
+  const card = document.createElement('div');
+  card.className = 'analysis-card';
+  card.dataset.analysisId = aId;
+
+  // Header
+  const header = document.createElement('div');
+  header.className = 'analysis-card-header';
+
+  const labelEl = document.createElement('span');
+  labelEl.className = 'analysis-card-label';
+  // Truncate long labels
+  const displayLabel = label.length > 100 ? label.substring(0, 97) + '...' : label;
+  labelEl.textContent = displayLabel;
+
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'analysis-card-toggle';
+  toggleBtn.textContent = 'Collapse';
+  toggleBtn.addEventListener('click', function() {
+    Dashboard._toggleAnalysisCard(aId);
+  });
+
+  header.appendChild(labelEl);
+  header.appendChild(toggleBtn);
+
+  // Content
+  const content = document.createElement('div');
+  content.className = 'analysis-card-content';
+  content.id = 'analysis-' + aId + '-content';
+
+  const kpiContainer = document.createElement('div');
+  kpiContainer.className = 'kpi-strip';
+  kpiContainer.id = 'analysis-' + aId + '-kpi';
+
+  const chartContainer = document.createElement('div');
+  chartContainer.className = 'chart-grid';
+  chartContainer.id = 'analysis-' + aId + '-charts';
+
+  const insightsContainer = document.createElement('div');
+  insightsContainer.className = 'insights-section';
+  insightsContainer.id = 'analysis-' + aId + '-insights';
+
+  content.appendChild(kpiContainer);
+  content.appendChild(chartContainer);
+  content.appendChild(insightsContainer);
+
+  card.appendChild(header);
+  card.appendChild(content);
+
+  historyContainer.prepend(card);
+
+  // Render into card-specific containers
+  if (typeof ChartRenderer !== 'undefined') {
+    ChartRenderer.renderDataOverviewInto(snapshot, Dashboard._csvData, kpiContainer, chartContainer, insightsContainer);
+  }
+
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+/**
+ * Toggle expand/collapse for an analysis card.
+ */
+Dashboard._toggleAnalysisCard = function(analysisId) {
+  const entry = Dashboard.analysisHistory.find(function(e) { return e.id === analysisId; });
+  if (!entry) return;
+
+  const content = document.getElementById('analysis-' + analysisId + '-content');
+  const card = document.querySelector('.analysis-card[data-analysis-id="' + analysisId + '"]');
+  const btn = card ? card.querySelector('.analysis-card-toggle') : null;
+  if (!content) return;
+
+  entry.expanded = !entry.expanded;
+
+  if (entry.expanded) {
+    content.classList.remove('collapsed');
+    if (btn) btn.textContent = 'Collapse';
+    // Re-render from snapshot
+    const kpiContainer = document.getElementById('analysis-' + analysisId + '-kpi');
+    const chartContainer = document.getElementById('analysis-' + analysisId + '-charts');
+    const insightsContainer = document.getElementById('analysis-' + analysisId + '-insights');
+    if (typeof ChartRenderer !== 'undefined' && kpiContainer && chartContainer && insightsContainer) {
+      ChartRenderer.renderDataOverviewInto(entry.prismaData, Dashboard._csvData, kpiContainer, chartContainer, insightsContainer);
+    }
+  } else {
+    content.classList.add('collapsed');
+    if (btn) btn.textContent = 'Expand';
+    // Purge Plotly charts on collapse
+    const plots = content.querySelectorAll('.chart-plot');
+    plots.forEach(function(p) { try { Plotly.purge(p); } catch(e) {} });
+  }
 };
 
 /**

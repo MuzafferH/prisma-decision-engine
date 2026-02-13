@@ -395,7 +395,7 @@ const Carlo = {
       const values = { ...variableValues };
 
       // Process edges: walk through causal graph
-      for (const edge of prismaData.edges) {
+      for (const edge of (prismaData.edges || [])) {
         const sourceValue = values[edge.from];
         if (sourceValue === undefined) continue;
 
