@@ -1,0 +1,128 @@
+{
+  "message": "I've analyzed your driver performance data. Here's what I found across 610 daily records for 5 drivers from October 2025 to January 2026.",
+  "toolCall": {
+    "id": "demo_analysis_001",
+    "name": "update_dashboard",
+    "input": {
+      "phase": "data_overview",
+      "prismaData": {
+        "dataSummary": {
+          "filename": "driver_performance.csv",
+          "rowCount": 610,
+          "dateRange": "Oct 2025 \u2013 Jan 2026",
+          "columns": ["date", "driver_id", "shift_start_scheduled", "shift_start_actual", "deliveries_completed", "deliveries_assigned", "late_deliveries", "hours_worked", "overtime_hours", "sick_day"],
+          "description": "Daily performance logs for 5 delivery drivers across 4 months, tracking deliveries, overtime, lateness, and sick days."
+        },
+        "kpiCards": [
+          {
+            "label": "Total Deliveries",
+            "value": "5,262",
+            "trend": "neutral",
+            "context": "Across 5 drivers over 4 months"
+          },
+          {
+            "label": "Avg Completion Rate",
+            "value": "87.4%",
+            "trend": "down",
+            "context": "Deliveries completed vs assigned"
+          },
+          {
+            "label": "Total Overtime Hours",
+            "value": "384h",
+            "trend": "up",
+            "context": "D3 alone accounts for 40%+ of all overtime"
+          },
+          {
+            "label": "Sick Days Taken",
+            "value": "11",
+            "trend": "up",
+            "context": "D2 accounts for 6 of 11 sick days"
+          },
+          {
+            "label": "Avg Late Deliveries/Day",
+            "value": "1.4",
+            "trend": "up",
+            "context": "Rising trend since December"
+          }
+        ],
+        "charts": [
+          {
+            "id": "deliveries-by-driver",
+            "title": "Total Deliveries by Driver",
+            "type": "bar",
+            "x": "driver_id",
+            "y": "deliveries_completed",
+            "aggregation": "sum",
+            "color": "#2563EB",
+            "sortOrder": "desc"
+          },
+          {
+            "id": "overtime-trend",
+            "title": "Weekly Overtime Hours (All Drivers)",
+            "type": "line",
+            "x": "date",
+            "y": "overtime_hours",
+            "aggregation": "sum",
+            "color": "#EF4444"
+          },
+          {
+            "id": "late-deliveries-by-driver",
+            "title": "Late Deliveries by Driver",
+            "type": "bar",
+            "x": "driver_id",
+            "y": "late_deliveries",
+            "aggregation": "sum",
+            "color": "#F59E0B",
+            "sortOrder": "desc"
+          },
+          {
+            "id": "hours-by-driver",
+            "title": "Average Hours Worked by Driver",
+            "type": "bar",
+            "x": "driver_id",
+            "y": "hours_worked",
+            "aggregation": "avg",
+            "color": "#10B981"
+          }
+        ],
+        "insights": [
+          {
+            "type": "anomaly",
+            "severity": "high",
+            "title": "Driver D2 Performance Collapse After Dec 1",
+            "description": "D2's late delivery rate tripled from 1.1/day (Oct-Nov) to 3.4/day (Dec-Jan). Shift start delays jumped to 25+ minutes. Six sick days taken. This driver may be burned out or disengaged.",
+            "simulatable": true,
+            "simulationPrompt": "What happens if I reduce the fleet from 7 drivers to 5?"
+          },
+          {
+            "type": "trend",
+            "severity": "high",
+            "title": "D3 Overtime Spiraling Upward",
+            "description": "Driver D3 averages 10.5 hours worked per shift \u2014 well above the 8-hour standard. Overtime hours have climbed from 0.3h/day in October to 1.8h/day in January. This trajectory is unsustainable and correlates with rising late deliveries.",
+            "simulatable": true,
+            "simulationPrompt": "What if D3's overtime exceeds 2 hours per day \u2014 how does it affect fleet reliability?"
+          },
+          {
+            "type": "pattern",
+            "severity": "medium",
+            "title": "Monday Volume Spikes Strain Capacity",
+            "description": "Mondays see 15-20% higher delivery volume than mid-week days. This creates a predictable weekly stress point that cascades into overtime and late deliveries throughout the week.",
+            "simulatable": false
+          },
+          {
+            "type": "correlation",
+            "severity": "medium",
+            "title": "Overtime and Late Deliveries Are Linked",
+            "description": "Drivers with overtime above 0.8h/day show 2x the late delivery rate. The relationship is not just individual \u2014 when one driver overworks, others pick up unfinished routes, spreading the load and lateness across the fleet.",
+            "simulatable": false
+          }
+        ]
+      }
+    }
+  },
+  "stopReason": "end_turn",
+  "usage": {
+    "inputTokens": 5200,
+    "outputTokens": 1800
+  }
+}

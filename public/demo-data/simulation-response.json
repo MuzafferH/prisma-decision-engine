@@ -1,0 +1,149 @@
+{
+  "message": "I'll simulate reducing your fleet from 7 to 5 drivers. Carlo is running 1,000 futures, looking at how overtime, late deliveries, and costs shift when you spread the same workload across fewer people.",
+  "toolCall": {
+    "id": "demo_sim_001",
+    "name": "update_dashboard",
+    "input": {
+      "phase": "simulation",
+      "prismaData": {
+        "variables": [
+          {
+            "id": "driver_count",
+            "label": "Number of Drivers",
+            "value": 7,
+            "min": 5,
+            "max": 7,
+            "distribution": "fixed",
+            "unit": "drivers",
+            "isInput": true
+          },
+          {
+            "id": "overtime_hours",
+            "label": "Overtime Hours (per driver/day)",
+            "value": 0.47,
+            "min": 0,
+            "max": 2.5,
+            "distribution": "right_skewed",
+            "unit": "hours",
+            "isInput": false
+          },
+          {
+            "id": "late_deliveries",
+            "label": "Late Deliveries (fleet/day)",
+            "value": 1.4,
+            "min": 0,
+            "max": 6,
+            "distribution": "right_skewed",
+            "unit": "deliveries",
+            "isInput": false
+          },
+          {
+            "id": "deliveries_per_driver",
+            "label": "Deliveries per Driver per Day",
+            "value": 8.6,
+            "min": 4,
+            "max": 14,
+            "distribution": "normal",
+            "unit": "deliveries",
+            "isInput": false
+          },
+          {
+            "id": "sick_days_monthly",
+            "label": "Sick Days (fleet/month)",
+            "value": 2.75,
+            "min": 0,
+            "max": 8,
+            "distribution": "right_skewed",
+            "unit": "days",
+            "isInput": false
+          }
+        ],
+        "edges": [
+          {
+            "from": "driver_count",
+            "to": "deliveries_per_driver",
+            "effect": "negative",
+            "strength": "strong",
+            "note": "Fewer drivers means each one handles more deliveries"
+          },
+          {
+            "from": "deliveries_per_driver",
+            "to": "overtime_hours",
+            "effect": "positive",
+            "strength": "strong",
+            "note": "More deliveries per driver pushes overtime up"
+          },
+          {
+            "from": "overtime_hours",
+            "to": "late_deliveries",
+            "effect": "positive",
+            "strength": "moderate",
+            "note": "Fatigued drivers deliver late"
+          },
+          {
+            "from": "overtime_hours",
+            "to": "sick_days_monthly",
+            "effect": "positive",
+            "strength": "moderate",
+            "note": "Chronic overtime leads to burnout and sick days"
+          },
+          {
+            "from": "late_deliveries",
+            "to": "sick_days_monthly",
+            "effect": "positive",
+            "strength": "weak",
+            "note": "Stress from late deliveries compounds burnout"
+          }
+        ],
+        "scenarios": [
+          {
+            "id": "reduce_fleet",
+            "label": "Reduce to 5 Drivers",
+            "color": "#EF4444",
+            "changes": {
+              "driver_count": { "value": 5 },
+              "overtime_hours": { "value": 2.2, "min": 1.0, "max": 5.0 },
+              "late_deliveries": { "value": 4.2, "min": 2.0, "max": 10 },
+              "deliveries_per_driver": { "value": 12.1, "min": 7, "max": 18 },
+              "sick_days_monthly": { "value": 6.0, "min": 3, "max": 12 }
+            },
+            "assumptions": [
+              "Same total delivery volume spread across 5 drivers",
+              "Overtime rate increases proportionally to workload",
+              "Late delivery rate doubles based on D2/D3 pattern from data"
+            ]
+          },
+          {
+            "id": "nothing",
+            "label": "Keep 7 Drivers",
+            "color": "#6B7280",
+            "changes": {},
+            "assumptions": [
+              "Current staffing and performance trends continue",
+              "D2 performance issues remain unaddressed"
+            ]
+          }
+        ],
+        "outcome": {
+          "id": "monthly_operating_cost",
+          "label": "Monthly Operating Cost",
+          "unit": "\u20ac/month",
+          "formula": "driver_count * 3200 + overtime_hours * driver_count * 42 * 22 + late_deliveries * 105 * 22 + sick_days_monthly * 320",
+          "direction": "lower_is_better",
+          "positiveLabel": "Cost Savings",
+          "negativeLabel": "Cost Increase"
+        },
+        "recommendation": {
+          "action": "Keep all 7 drivers. Cutting to 5 saves \u20ac6,400/month in salaries but creates \u20ac8,000+ in overtime and late delivery penalties in most scenarios.",
+          "watch": "Driver D2's performance is your biggest risk \u2014 their late delivery rate has tripled since December. Address D2 before making any headcount decisions.",
+          "trigger": "If average fleet overtime drops below 0.3h/day for 4 consecutive weeks, then revisit the reduction \u2014 the system may have enough slack."
+        }
+      }
+    }
+  },
+  "stopReason": "end_turn",
+  "usage": {
+    "inputTokens": 8200,
+    "outputTokens": 2800
+  }
+}
