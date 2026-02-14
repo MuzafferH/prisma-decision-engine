@@ -1519,13 +1519,43 @@ const Visualizations = {
     const unit = prismaState.outcome?.unit || '';
     const traces = [];
 
+    // Pass 1: Compute global min/max across all non-nothing scenarios
+    let globalMin = Infinity;
+    let globalMax = -Infinity;
+    const scenarioOutcomes = [];
+
     for (const s of scenarios) {
       if (s.id === 'nothing' || s.id === 'do_nothing') continue;
       const results = carloResults[s.id];
-      if (!results || !results.outcomes) continue;
+      if (!results || !results.outcomes || results.outcomes.length === 0) continue;
 
+      const valid = results.outcomes.filter(v => isFinite(v));
+      if (valid.length === 0) continue;
+
+      const lo = Math.min(...valid);
+      const hi = Math.max(...valid);
+      if (lo < globalMin) globalMin = lo;
+      if (hi > globalMax) globalMax = hi;
+
+      scenarioOutcomes.push({ scenario: s, outcomes: valid });
+    }
+
+    if (scenarioOutcomes.length === 0) return;
+
+    // Compute shared bin parameters
+    const range = globalMax - globalMin;
+    const numBins = Math.max(20, Math.min(80, Math.ceil(Math.sqrt(scenarioOutcomes[0].outcomes.length))));
+    const binSize = range > 0
+      ? range / numBins
+      : (Math.abs(globalMax) * 0.1 || 1);
+
+    const binStart = globalMin - binSize * 0.5;
+    const binEnd = globalMax + binSize * 1.5;
+
+    // Pass 2: Build traces with explicit xbins
+    for (const { scenario: s, outcomes } of scenarioOutcomes) {
       traces.push({
-        x: results.outcomes,
+        x: outcomes,
         type: 'histogram',
         name: s.label || s.id,
         opacity: 0.75,
@@ -1533,12 +1563,9 @@ const Visualizations = {
           color: s.color || '#2563EB',
           line: { color: 'rgba(255,255,255,0.3)', width: 0.5 }
         },
-        nbinsx: Math.max(20, Math.min(80, Math.ceil(Math.sqrt(results.outcomes.length)))),
-        autobinx: false
+        xbins: { start: binStart, end: binEnd, size: binSize }
       });
     }
-
-    if (traces.length === 0) return;
 
     const layout = {
       ...PRISMA_CHART_LAYOUT,
@@ -1559,13 +1586,15 @@ const Visualizations = {
       shapes: []
     };
 
-    // Add vertical line at zero
-    layout.shapes.push({
-      type: 'line',
-      x0: 0, x1: 0, y0: 0, y1: 1,
-      yref: 'paper',
-      line: { color: '#D5D5D0', width: 1, dash: 'dot' }
-    });
+    // Conditional zero-line — only when 0 is within visible range
+    if (globalMin <= 0 && globalMax >= 0) {
+      layout.shapes.push({
+        type: 'line',
+        x0: 0, x1: 0, y0: 0, y1: 1,
+        yref: 'paper',
+        line: { color: '#D5D5D0', width: 1, dash: 'dot' }
+      });
+    }
 
     Plotly.newPlot(container, traces, layout, {
       responsive: true,
