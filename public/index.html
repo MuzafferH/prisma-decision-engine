@@ -126,6 +126,7 @@
 
     /* ====== PRISM ICON ====== */
     .prism-icon {
+      margin-top: 24px;
       margin-bottom: 24px;
       opacity: 0;
       animation: fadeUp 0.6s var(--ease-out) 0.15s forwards;
@@ -484,59 +485,6 @@
       text-align: center;
     }
 
-    /* ====== OPUS CALLOUT ====== */
-    .opus-callout {
-      padding: 60px 24px;
-      display: flex;
-      justify-content: center;
-      text-align: center;
-    }
-    .opus-callout-inner {
-      max-width: 640px;
-      padding: 32px 28px;
-      background: rgba(255,255,255,0.6);
-      border: 1px solid rgba(245,192,192,0.25);
-      border-radius: 12px;
-    }
-    .opus-badge {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #fff;
-      background: #2563EB;
-      padding: 3px 10px;
-      border-radius: 4px;
-      display: inline-block;
-      margin-bottom: 16px;
-    }
-    .opus-headline {
-      font-family: var(--font-pixel);
-      font-size: clamp(1.2rem, 2.5vw, 1.5rem);
-      color: var(--text);
-      letter-spacing: 0.03em;
-      margin-bottom: 20px;
-    }
-    .opus-list {
-      text-align: left;
-      list-style: decimal;
-      padding-left: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .opus-list li {
-      font-family: var(--font-sans);
-      font-size: 14px;
-      color: var(--text3);
-      line-height: 1.6;
-    }
-    .opus-list li strong {
-      color: var(--text);
-      font-weight: 600;
-    }
-
     /* ====== SCREENSHOT CAROUSEL ====== */
     .screenshot-section {
       padding: 40px 24px;
@@ -545,7 +493,7 @@
     .screenshot-carousel {
       position: relative;
       width: 100%;
-      max-width: 1200px;
+      max-width: 900px;
       margin: 0 auto;
       aspect-ratio: 16 / 10;
       overflow: hidden;
@@ -1188,20 +1136,6 @@
         <div class="stat-value">SLA at 94%</div>
         <div class="stat-desc">PRISMA flags that 3 top drivers show burnout signals &mdash; if any one leaves, SLA drops to 86% within 2 weeks.</div>
       </div>
-    </div>
-  </section>
-
-  <!-- ====== OPUS 4.6 CALLOUT ====== -->
-  <section class="opus-callout reveal" style="position: relative; z-index: 1;">
-    <div class="opus-callout-inner">
-      <span class="opus-badge">Powered by Claude Opus 4.6</span>
-      <h2 class="opus-headline">What Claude Opus 4.6 Does Inside PRISMA</h2>
-      <ol class="opus-list">
-        <li>Reads your data and builds a causal model &mdash; which variables drive which outcomes, including hidden feedback loops</li>
-        <li>Structures Monte Carlo simulations &mdash; defines distributions, scenarios, and outcome formulas from your actual data</li>
-        <li>Classifies risk using the Taleb framework: <strong>FRAGILE</strong> / <strong>ROBUST</strong> / <strong>ANTIFRAGILE</strong></li>
-        <li>Runs sensitivity analysis to find the 1&ndash;2 variables that actually matter, then delivers a confidence-scored recommendation</li>
-      </ol>
     </div>
   </section>
 
