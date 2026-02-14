@@ -1533,7 +1533,8 @@ const Visualizations = {
           color: s.color || '#2563EB',
           line: { color: 'rgba(255,255,255,0.3)', width: 0.5 }
         },
-        nbinsx: 40
+        nbinsx: Math.max(20, Math.min(80, Math.ceil(Math.sqrt(results.outcomes.length)))),
+        autobinx: false
       });
     }
 

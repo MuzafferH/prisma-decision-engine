@@ -92,6 +92,28 @@ Chat.sendMessage = async function() {
   this.messages.push({ role: 'user', content: text });
   this.displayMessage('user', text);
 
+  // Enrich free-form what-if questions with CSV context + NEW SIMULATION directive
+  const lastMsg = this.messages[this.messages.length - 1];
+  const lastMsgText = typeof lastMsg?.content === 'string' ? lastMsg.content : '';
+  const looksLikeSimulation = /\bwhat\s+(?:if|would|happens|could)\b/i.test(lastMsgText)
+    || /\bsimulate\b/i.test(lastMsgText)
+    || /\b(?:impact|scenario|model)\b/i.test(lastMsgText);
+  const isMetaQuestion = /\b(?:upload|more data|another file|csv|different file)\b/i.test(lastMsgText);
+
+  if (looksLikeSimulation && !isMetaQuestion && !this._forceSimulation
+      && typeof Dashboard !== 'undefined' && Dashboard._csvAnalysis) {
+    const cols = Dashboard._csvAnalysis.columns || [];
+    const numericCols = cols.filter(c => c.type === 'numeric').map(c =>
+      `${c.name}: mean=${c.mean?.toFixed(2)}, min=${c.min}, max=${c.max}`
+    ).join('; ');
+    if (numericCols) {
+      lastMsg.content = '[NEW SIMULATION — create a completely fresh simulation for this specific question. Do NOT reuse variables, scenarios, or formulas from any previous simulation.]\n\n'
+        + lastMsgText
+        + '\n\n[SIMULATION CONTEXT — use these exact column names as variable IDs: ' + numericCols + ']';
+    }
+    this._forceSimulation = true;
+  }
+
   // Show typing indicator and disable input
   this.showTypingIndicator();
   this.isLoading = true;
@@ -813,8 +835,24 @@ Chat._compressMessage = function(msg) {
  * Compresses tool_use blocks in older messages to save tokens.
  */
 Chat._trimMessages = function(messages) {
-  // Compress ALL tool_use blocks (even recent ones) to prevent payload bloat
-  const compressed = messages.map(msg => Chat._compressMessage(msg));
+  // Compress tool_use blocks + strip old simulation enrichment
+  const compressed = messages.map((msg, idx) => {
+    const c = Chat._compressMessage(msg);
+
+    // Strip old simulation enrichment from OLDER user messages, but NOT the current one.
+    // The current message is the last user message (last or second-to-last in array).
+    const isRecentUserMsg = idx >= messages.length - 2 && msg.role === 'user';
+    if (!isRecentUserMsg && typeof c.content === 'string' && c.role === 'user') {
+      let text = c.content;
+      text = text.replace(/\n*\[SIMULATION CONTEXT[^\]]*\]/g, '');
+      text = text.replace(/\[NEW SIMULATION[^\]]*\]\n*/g, '');
+      if (text !== c.content) {
+        return { role: c.role, content: text.trim() };
+      }
+    }
+
+    return c;
+  });
 
   if (compressed.length <= 14) return compressed;
 

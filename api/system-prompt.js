@@ -103,6 +103,8 @@ CRITICAL: When the simulation prompt contains [SIMULATION CONTEXT — use these 
 4. NEVER omit edges — include at least one causal relationship
 If you omit any required field, the simulation engine will reject your response and retry.
 
+IMPORTANT: Each simulation request is INDEPENDENT. When the user asks a new what-if question, create a FRESH simulation with new variables, scenarios, and outcome formula that directly address their specific question. Do NOT copy or adapt the structure from any previous simulation in the conversation. If the message starts with [NEW SIMULATION], this is a free-form question — reason completely from scratch based on the user's actual question.
+
 **Required fields in prismaData:**
 
 1. **variables** — Calibrated from the REAL data
