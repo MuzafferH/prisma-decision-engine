@@ -666,11 +666,13 @@ Analyze this data. Generate chart specs, KPI cards, and insights with simulation
       if (sendBtn) sendBtn.disabled = false;
 
       if (apiResponse.status === 401) {
+        if (typeof ChartRenderer !== 'undefined') ChartRenderer.clearAllSkeletons();
         if (window.PrismaGate) window.PrismaGate.handle401();
         return;
       }
 
       if (!apiResponse.ok) {
+        if (typeof ChartRenderer !== 'undefined') ChartRenderer.clearAllSkeletons();
         const errorData = await apiResponse.json().catch(() => ({}));
         this.displayMessage('error', errorData.error || 'Failed to analyze data.');
         return;
@@ -711,17 +713,19 @@ Analyze this data. Generate chart specs, KPI cards, and insights with simulation
           }]
         });
 
-        // Follow up if needed
-        if (response.stopReason === 'tool_use' && this.messages.length < 60) {
+        // Follow up if needed (accept both stop reasons — tool_choice forcing returns end_turn)
+        if (response.toolCall && (response.stopReason === 'tool_use' || response.stopReason === 'end_turn') && this.messages.length < 60) {
           await this.sendFollowUp();
         }
       } else if (response.message) {
-        // No tool call — just add text to history
+        // No tool call — clear skeletons (Claude skipped the tool) and add text to history
+        if (typeof ChartRenderer !== 'undefined') ChartRenderer.clearAllSkeletons();
         this.messages.push({ role: 'assistant', content: response.message });
       }
 
     } catch (fetchError) {
       console.error('API call error:', fetchError);
+      if (typeof ChartRenderer !== 'undefined') ChartRenderer.clearAllSkeletons();
       this.hideTypingIndicator();
       this.isLoading = false;
       if (sendBtn) sendBtn.disabled = false;
@@ -730,6 +734,7 @@ Analyze this data. Generate chart specs, KPI cards, and insights with simulation
 
   } catch (parseError) {
     console.error('CSV parse error:', parseError);
+    if (typeof ChartRenderer !== 'undefined') ChartRenderer.clearAllSkeletons();
     this.displayMessage('error', 'Failed to parse file. Please ensure it\'s a valid CSV.');
     if (sendBtn) sendBtn.disabled = false;
   }

@@ -45,6 +45,7 @@ const ChartRenderer = {
   renderDataOverview(prismaData, csvData, csvAnalysis) {
     if (!prismaData) return;
     this._clearLoadingFacts();
+    this.clearAllSkeletons();
 
     if (prismaData.dataSummary) {
       this.renderSummaryCard(prismaData.dataSummary);
@@ -71,6 +72,7 @@ const ChartRenderer = {
   renderDataOverviewInto(prismaData, csvData, kpiContainer, chartContainer, insightsContainer) {
     if (!prismaData) return;
     this._clearLoadingFacts();
+    this.clearAllSkeletons();
 
     if (prismaData.kpiCards) {
       this.renderKPICardsInto(prismaData.kpiCards, kpiContainer);
@@ -189,6 +191,35 @@ const ChartRenderer = {
     if (this._loadingFactInterval) {
       clearInterval(this._loadingFactInterval);
       this._loadingFactInterval = null;
+    }
+  },
+
+  /**
+   * Clear ALL skeleton loading UI: interval + DOM remnants.
+   * Call this in every exit path that could leave skeletons visible.
+   */
+  clearAllSkeletons() {
+    this._clearLoadingFacts();
+
+    // Clear skeleton summary card
+    const summaryCard = document.getElementById('data-summary-card');
+    if (summaryCard && summaryCard.classList.contains('skeleton-loading')) {
+      summaryCard.className = 'data-summary-card';
+      summaryCard.textContent = '';
+    }
+
+    // Clear skeleton KPI cards
+    const kpiStrip = document.getElementById('kpi-strip');
+    if (kpiStrip) {
+      const skeletons = kpiStrip.querySelectorAll('.skeleton-loading');
+      skeletons.forEach(s => s.remove());
+    }
+
+    // Clear skeleton fact card from chart grid
+    const chartGrid = document.getElementById('chart-grid');
+    if (chartGrid) {
+      const factCard = chartGrid.querySelector('.skeleton-fact-card');
+      if (factCard) factCard.remove();
     }
   },
 
