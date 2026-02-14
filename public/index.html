@@ -805,18 +805,43 @@
     }
 
     .credits {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text3);
-      letter-spacing: 0.04em;
-      margin-top: 24px;
-      max-width: 480px;
+      margin-top: 32px;
+      max-width: 420px;
       margin-left: auto;
       margin-right: auto;
+      text-align: center;
+      line-height: 1.6;
     }
-    .credits span {
+    .credits strong {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+    .credits .credits-bio {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--text3);
       display: block;
-      margin-top: 4px;
+      margin-top: 6px;
+    }
+    .credits .credits-tagline {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-style: italic;
+      color: var(--text2);
+      display: block;
+      margin-top: 8px;
+    }
+    .credits span.credits-built {
+      display: block;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(245, 192, 192, 0.3);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text3);
+      letter-spacing: 0.04em;
     }
 
     /* ====== SCROLL REVEAL ====== */
@@ -1181,12 +1206,12 @@
       </span>
     </a>
     <div class="credits reveal">
-      <strong>Muzaffer Hizel</strong><br>
-      From warehouse floors to HQ boardrooms &mdash; scaled operations from single-city launches
-      to multi-region P&amp;Ls across Big Tech and unicorn startups (Seed to Series C).<br>
-      Built the dashboards, designed the processes, made the calls.<br>
-      Now building the tool I wished I had.
-      <span>Built with Claude (Opus 4.6) &middot; Anthropic Hackathon 2026</span>
+      <strong>Muzaffer Hizel</strong>
+      <span class="credits-bio">From warehouse floors to HQ boardrooms &mdash; scaled operations from single-city launches
+      to multi-region P&amp;Ls across Big Tech and unicorn startups (Seed to Series C).</span>
+      <span class="credits-tagline">Built the dashboards, designed the processes, made the calls.
+      Now building the tool I wished I had.</span>
+      <span class="credits-built">Built with Claude (Opus 4.6) &middot; Anthropic Hackathon 2026</span>
     </div>
   </section>
 
