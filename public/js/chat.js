@@ -680,22 +680,36 @@ Analyze this data. Generate chart specs, KPI cards, and insights with simulation
 
       const response = await apiResponse.json();
 
-      // Display Claude's chat message
-      if (response.message) {
-        this.displayMessage('assistant', response.message);
-      }
-
       // Handle tool call (data_overview or simulation)
       if (response.toolCall) {
         if (this.onDashboardUpdate) {
           this.onDashboardUpdate(response.toolCall);
         }
 
-        // Combine text + tool_use in ONE assistant message (API requires alternating roles)
+        // Build synthetic summary from tool call data (don't display Claude's pre-tool text)
+        const pd = response.toolCall.input?.prismaData || {};
+        const ds = pd.dataSummary || {};
+        const insightCount = (pd.insights || []).length;
+        const simCount = (pd.insights || []).filter(i => i && i.simulatable).length;
+        const filename = ds.filename || file.name;
+        const rows = ds.rowCount || data.length;
+        const dateHint = ds.dateRange ? ' (' + ds.dateRange + ')' : '';
+
+        let summary = filename + ' is loaded \u2014 ' + rows.toLocaleString() + ' rows' + dateHint + '.';
+        if (insightCount > 0 && simCount > 0) {
+          summary += ' I found ' + insightCount + ' pattern' + (insightCount > 1 ? 's' : '')
+            + ' in your data, ' + simCount + ' you can simulate. Click "Simulate this" on any insight card to run 1,000 Monte Carlo scenarios.';
+        } else if (insightCount > 0) {
+          summary += ' I found ' + insightCount + ' pattern' + (insightCount > 1 ? 's' : '') + ' in your data.';
+        }
+
+        this.displayMessage('assistant', summary);
+
+        // Push tool_use + tool_result to history (needed for conversation context)
         this.messages.push({
           role: 'assistant',
           content: [
-            ...(response.message ? [{ type: 'text', text: response.message }] : []),
+            { type: 'text', text: summary },
             {
               type: 'tool_use',
               id: response.toolCall.id || 'tool_1',
@@ -709,18 +723,20 @@ Analyze this data. Generate chart specs, KPI cards, and insights with simulation
           content: [{
             type: 'tool_result',
             tool_use_id: response.toolCall.id || 'tool_1',
-            content: 'Dashboard updated successfully.'
+            content: 'Dashboard rendered: ' + filename + ', ' + rows + ' rows, ' + insightCount + ' insights surfaced.'
           }]
         });
 
-        // Follow up if needed (accept both stop reasons — tool_choice forcing returns end_turn)
-        if (response.toolCall && (response.stopReason === 'tool_use' || response.stopReason === 'end_turn') && this.messages.length < 60) {
-          await this.sendFollowUp();
-        }
+        // NO sendFollowUp() here — the dashboard rendered from the first tool call.
+        // A follow-up sends tool_result to Claude, which often triggers a SECOND
+        // data_overview tool call, creating a duplicate analysis card + infinite
+        // typing indicator. See: Feb 2026 bug fix.
       } else if (response.message) {
-        // No tool call — clear skeletons (Claude skipped the tool) and add text to history
+        // No tool call despite forced tool_choice — should never happen, but handle gracefully
+        console.warn('[handleCSVUpload] No tool call despite forced tool_choice — showing text fallback');
         if (typeof ChartRenderer !== 'undefined') ChartRenderer.clearAllSkeletons();
         this.messages.push({ role: 'assistant', content: response.message });
+        this.displayMessage('assistant', response.message);
       }
 
     } catch (fetchError) {
