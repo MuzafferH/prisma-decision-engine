@@ -48,9 +48,10 @@ The landing page has 5 interactive visual systems, all implemented as inline `<s
 2. **CTA buttons** — `PrismaButtonParticles` class in `button-particles.js`, hero (14 dots) + footer (18 dots, deferred)
 3. **Cascade section** — 3 canvases ("Your data → 1,000 simulations → Your answer"), looping scatter→histogram→bell animation
 4. **Proof count-up** — `data-count-target` attribute, easeOutExpo counter + orbiting rose dot
-5. **Domain pill bar** — 3 clickable pills (Operations/Medicine/Marketing) above `.sim-question`. Switches question, labels, values, and bar behavior via `domains` config object. Each domain has its own `formatValue()` (€/$/%). Pill click triggers immediate `resample()` via `window.__prismaResample`. No auto-rotation (carousel anti-pattern). Resample interval: 3s. `prefers-reduced-motion`: instant text swap, no crossfade.
+5. **Ops showcase** — 3-panel auto-rotating carousel (4s interval) with ops-specific examples: staffing (CSS bar chart), routes (SVG polyline), overtime (CSS histogram). `.showcase-*` CSS namespace. "First panel in flow, rest absolute" layout. Labeled pill dot indicators (clickable). Pause-on-hover (WCAG 2.2.2). Mobile (<640px): all panels stacked static, no rotation.
+6. **Screenshot carousel** — 2 WebP product screenshots (`public/images/prisma-screenshot-{1,2}.webp`), auto-rotates every 5s. `object-fit: contain`, `max-width: 900px`. Labeled pill dots. Pause-on-hover.
 
-**Animation lifecycle:** `window.__prismaAnimations[]` (rAF IDs at fixed indices) + `window.__prismaParticles[]` (button instances). CTA click handler cancels all before fade-out. `prefers-reduced-motion` disables everything.
+**Animation lifecycle:** `window.__prismaAnimations[]` — `[0]` dot grid rAF, `[1]` cascade rAF, `[2]` showcase `setInterval`, `[3]` screenshot `setInterval`. `window.__prismaParticles[]` stores button instances. CTA click handler cancels all (`idx >= 2` clears intervals) before fade-out. `prefers-reduced-motion` disables everything.
 
 ### Simulation History (stacking cards)
 Simulations no longer replace each other — they stack as independent cards.
@@ -403,6 +404,7 @@ When discovering hidden insights from data:
 
 ```
 ├── CLAUDE.md                    ← This file (project instructions + Prisma persona)
+├── SUBMISSION_SUMMARY.md        ← Hackathon submission summary (~170 words)
 ├── public/
 │   ├── index.html               ← Landing page (interactive dot grid, particle buttons, cascade)
 │   ├── app.html                 ← Main app (chat panel + answer panel)
@@ -417,6 +419,7 @@ When discovering hidden insights from data:
 │   │   ├── nassim.js            ← Taleb classifier + sensitivity
 │   │   ├── csv-analyzer.js      ← CSV stats extraction
 │   │   └── demo-data.js         ← Demo dataset
+│   ├── images/                  ← Product screenshots (WebP, lazy-loaded)
 │   ├── fonts/                   ← Geist Pixel Triangle font
 │   └── data/                    ← Sample CSV files
 ├── api/
