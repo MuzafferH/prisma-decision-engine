@@ -289,6 +289,7 @@
     }
     .showcase-container {
       position: relative;
+      overflow: hidden;
     }
     .showcase-panel {
       position: absolute;
@@ -378,7 +379,7 @@
 
     /* Line chart */
     .showcase-chart-line {
-      aspect-ratio: 2 / 1;
+      height: 90px;
       border: 1px solid rgba(245,192,192,0.2);
       border-radius: 6px;
       background: rgba(255,255,255,0.4);
@@ -439,22 +440,31 @@
     /* Showcase dots + labels */
     .showcase-dots {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       justify-content: center;
       margin-top: 16px;
     }
     .showcase-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      border: 1px solid var(--rose);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text3);
       background: transparent;
+      border: 1px solid rgba(245, 192, 192, 0.35);
+      border-radius: 12px;
+      padding: 4px 12px;
       cursor: pointer;
-      padding: 0;
-      transition: background 0.3s ease;
+      transition: all 0.3s ease;
+      opacity: 0.6;
+    }
+    .showcase-dot:hover {
+      opacity: 0.9;
+      border-color: var(--rose);
     }
     .showcase-dot.active {
-      background: var(--rose);
+      background: rgba(245, 192, 192, 0.2);
+      border-color: var(--rose);
+      color: var(--text);
+      opacity: 1;
     }
     .showcase-realtime {
       font-family: var(--font-mono);
@@ -537,18 +547,19 @@
       width: 100%;
       max-width: 1200px;
       margin: 0 auto;
-      aspect-ratio: 16 / 9;
+      aspect-ratio: 16 / 10;
       overflow: hidden;
       border: 1px solid rgba(245, 192, 192, 0.28);
       box-shadow: 0 4px 20px rgba(227, 178, 179, 0.10);
       border-radius: 12px;
+      background: #F5F0F0;
     }
     .screenshot-carousel .screenshot-img {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       transition: opacity 0.6s ease;
       opacity: 0;
     }
@@ -557,22 +568,31 @@
     }
     .screenshot-dots {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       justify-content: center;
       margin-top: 12px;
     }
     .screenshot-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      border: 1px solid var(--rose);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text3);
       background: transparent;
+      border: 1px solid rgba(245, 192, 192, 0.35);
+      border-radius: 12px;
+      padding: 4px 12px;
       cursor: pointer;
-      padding: 0;
-      transition: background 0.3s ease;
+      transition: all 0.3s ease;
+      opacity: 0.6;
+    }
+    .screenshot-dot:hover {
+      opacity: 0.9;
+      border-color: var(--rose);
     }
     .screenshot-dot.active {
-      background: var(--rose);
+      background: rgba(245, 192, 192, 0.2);
+      border-color: var(--rose);
+      color: var(--text);
+      opacity: 1;
     }
     .screenshot-label {
       font-family: var(--font-mono);
@@ -918,7 +938,6 @@
       }
       .showcase-dots { display: none; }
       .showcase-cards { flex-direction: column; }
-      .showcase-chart-line { aspect-ratio: 2 / 1; }
     }
 
     /* ====== REDUCED MOTION ====== */
@@ -1099,9 +1118,9 @@
         </div>
 
         <div class="showcase-dots">
-          <button class="showcase-dot active" aria-label="Staffing decision example"></button>
-          <button class="showcase-dot" aria-label="Route optimization example"></button>
-          <button class="showcase-dot" aria-label="Cost control example"></button>
+          <button class="showcase-dot active" aria-label="Staffing decision example">Staffing</button>
+          <button class="showcase-dot" aria-label="Route optimization example">Routes</button>
+          <button class="showcase-dot" aria-label="Cost control example">Overtime</button>
         </div>
 
         <p class="showcase-realtime">1,000 scenarios &middot; computed in real-time</p>
@@ -1201,8 +1220,8 @@
            class="screenshot-img">
     </div>
     <div class="screenshot-dots">
-      <button class="screenshot-dot active" aria-label="Screenshot 1"></button>
-      <button class="screenshot-dot" aria-label="Screenshot 2"></button>
+      <button class="screenshot-dot active" aria-label="Simulation view">Simulation</button>
+      <button class="screenshot-dot" aria-label="Data analysis view">Analysis</button>
     </div>
     <p class="screenshot-label">Live product. Real data. Actual simulation output.</p>
   </section>
@@ -1229,8 +1248,10 @@
     </a>
     <div class="credits reveal">
       <strong>Muzaffer Hizel</strong><br>
-      6 years scaling logistics operations &mdash; 800+ field workforce, 60K packages/day, 12-city multi-country ops.<br>
-      Built the dashboards, designed the processes, made the calls. Now building the tool I wished I had.
+      From warehouse floors to HQ boardrooms &mdash; scaled operations from single-city launches
+      to multi-region P&amp;Ls across Big Tech and unicorn startups (Seed to Series C).<br>
+      Built the dashboards, designed the processes, made the calls.<br>
+      Now building the tool I wished I had.
       <span>Built with Claude (Opus 4.6) &middot; Anthropic Hackathon 2026</span>
     </div>
   </section>
