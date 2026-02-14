@@ -17,8 +17,19 @@
 
   // 2. Patch fetch SYNCHRONOUSLY (before gate script calls /api/gate)
   var originalFetch = window.fetch;
-  var callIndex = 0;
   var responses = null; // loaded async
+  var analysisServed = false;
+
+  function jsonResponse(data) {
+    return new Response(JSON.stringify(data),
+      { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  function emptyResponse() {
+    return jsonResponse({
+      message: '', toolCall: null,
+      stopReason: 'end_turn', usage: { inputTokens: 0, outputTokens: 0 }
+    });
+  }
 
   window.fetch = function(url, options) {
     // Only intercept string URLs targeting our API
@@ -28,44 +39,87 @@
 
     // /api/gate — bypass password
     if (url.includes('/api/gate')) {
-      return Promise.resolve(new Response(JSON.stringify(
+      return Promise.resolve(jsonResponse(
         options && options.method === 'POST' ? { valid: true } : { gated: false }
-      ), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+      ));
     }
 
-    // /api/chat — return pre-saved responses in sequence
+    // /api/chat — content-based routing (not sequential counter)
     if (url.includes('/api/chat')) {
       return new Promise(function(resolve) {
-        // Wait for JSONs to finish loading (10s timeout prevents hung demo)
         var waited = 0;
         function waitForData() {
           if (responses || waited >= 10000) {
-            // Simulate API latency
             setTimeout(function() {
               if (!responses) {
-                resolve(new Response(JSON.stringify({
+                resolve(jsonResponse({
                   message: 'Demo data failed to load.', toolCall: null,
                   stopReason: 'end_turn', usage: { inputTokens: 0, outputTokens: 0 }
-                }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+                }));
                 return;
               }
 
-              // Set sim card label for the simulation response
-              if (callIndex === 1 && typeof Dashboard !== 'undefined') {
-                Dashboard._lastSimulationPrompt = 'What happens if I reduce the fleet from 7 drivers to 5?';
+              // Parse request body to determine response type
+              var body = null;
+              try {
+                body = JSON.parse(options && options.body ? options.body : '{}');
+              } catch(e) {}
+
+              var msgs = (body && body.messages) || [];
+              var lastMsg = msgs[msgs.length - 1];
+              var lastContent = lastMsg ? lastMsg.content : '';
+
+              // CHECK 1: Simulation — forceSimulation flag is the definitive signal.
+              // Must come BEFORE follow-up check: sendFollowUp() after a simulation
+              // carries earlier messages that match simulation keywords.
+              var isSimulation = body && body.forceSimulation === true;
+              if (!isSimulation && lastMsg && typeof lastContent === 'string') {
+                isSimulation = /\bwhat\s+(?:if|would|happens)\b/i.test(lastContent)
+                  || /\bsimulate\b/i.test(lastContent);
               }
 
-              if (callIndex < responses.length) {
-                resolve(new Response(JSON.stringify(responses[callIndex++]),
-                  { status: 200, headers: { 'Content-Type': 'application/json' } }));
-              } else {
-                // Follow-up calls after all responses used: empty text (ends sendFollowUp loop)
-                resolve(new Response(JSON.stringify({
-                  message: '', toolCall: null,
-                  stopReason: 'end_turn', usage: { inputTokens: 0, outputTokens: 0 }
-                }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+              if (isSimulation) {
+                // Override sim card label — pre-saved data is always fleet reduction
+                if (typeof Dashboard !== 'undefined') {
+                  Dashboard._lastSimulationPrompt = 'What happens if I reduce the fleet from 7 drivers to 5?';
+                }
+                console.log('[Demo] Serving simulation response');
+                resolve(jsonResponse(responses[1]));
+                return;
               }
-            }, 3000);
+
+              // CHECK 2: Follow-up with tool_result — ends sendFollowUp() loop.
+              // Array.isArray guard required: user text messages have string content,
+              // only tool_result messages have array content.
+              var isFollowUp = lastMsg && lastMsg.role === 'user'
+                && Array.isArray(lastContent)
+                && lastContent.some(function(b) { return b.type === 'tool_result'; });
+
+              if (isFollowUp) {
+                console.log('[Demo] Serving empty follow-up response');
+                resolve(emptyResponse());
+                return;
+              }
+
+              // CHECK 3: CSV upload — identified by [CSV_UPLOAD] prefix in last message.
+              // msgs[0] persists as CSV context in ALL future calls, so we check the
+              // LAST message (which is the CSV content only on the initial upload call).
+              // analysisServed flag prevents serving analysis twice.
+              var isCSVUpload = !analysisServed
+                && typeof lastContent === 'string'
+                && lastContent.indexOf('[CSV_UPLOAD]') !== -1;
+
+              if (isCSVUpload) {
+                analysisServed = true;
+                console.log('[Demo] Serving analysis response');
+                resolve(jsonResponse(responses[0]));
+                return;
+              }
+
+              // CHECK 4: Default — catch-all
+              console.log('[Demo] Serving default empty response');
+              resolve(emptyResponse());
+            }, 3000); // simulate API latency
           } else {
             waited += 50;
             setTimeout(waitForData, 50);
