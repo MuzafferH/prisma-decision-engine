@@ -1,0 +1,149 @@
+{
+  "message": "Smart move \u2014 a targeted removal instead of a blanket cut. D2 is clearly your weakest link: 6 of 11 sick days, late deliveries tripled to 3.4/day, and chronic shift delays. Carlo is running 1,000 futures with D2 removed and the remaining 6 drivers absorbing the routes.",
+  "toolCall": {
+    "id": "demo_sim_002",
+    "name": "update_dashboard",
+    "input": {
+      "phase": "simulation",
+      "prismaData": {
+        "variables": [
+          {
+            "id": "driver_count",
+            "label": "Number of Drivers",
+            "value": 6,
+            "min": 6,
+            "max": 6,
+            "distribution": "fixed",
+            "unit": "drivers",
+            "isInput": true
+          },
+          {
+            "id": "overtime_hours",
+            "label": "Overtime Hours (per driver/day)",
+            "value": 1.2,
+            "min": 0.8,
+            "max": 4.0,
+            "distribution": "right_skewed",
+            "unit": "hours",
+            "isInput": false
+          },
+          {
+            "id": "late_deliveries",
+            "label": "Late Deliveries (fleet/day)",
+            "value": 1.0,
+            "min": 0.3,
+            "max": 5.0,
+            "distribution": "right_skewed",
+            "unit": "deliveries",
+            "isInput": false
+          },
+          {
+            "id": "deliveries_per_driver",
+            "label": "Deliveries per Driver per Day",
+            "value": 10.0,
+            "min": 6,
+            "max": 15,
+            "distribution": "normal",
+            "unit": "deliveries",
+            "isInput": false
+          },
+          {
+            "id": "sick_days_monthly",
+            "label": "Sick Days (fleet/month)",
+            "value": 1.5,
+            "min": 0.5,
+            "max": 7,
+            "distribution": "right_skewed",
+            "unit": "days",
+            "isInput": false
+          }
+        ],
+        "edges": [
+          {
+            "from": "driver_count",
+            "to": "deliveries_per_driver",
+            "effect": "negative",
+            "strength": "strong",
+            "note": "Fewer drivers means each one handles more deliveries"
+          },
+          {
+            "from": "deliveries_per_driver",
+            "to": "overtime_hours",
+            "effect": "positive",
+            "strength": "moderate",
+            "note": "More deliveries per driver pushes overtime up"
+          },
+          {
+            "from": "overtime_hours",
+            "to": "late_deliveries",
+            "effect": "positive",
+            "strength": "moderate",
+            "note": "Fatigued drivers deliver late"
+          },
+          {
+            "from": "overtime_hours",
+            "to": "sick_days_monthly",
+            "effect": "positive",
+            "strength": "moderate",
+            "note": "Chronic overtime leads to burnout and sick days"
+          },
+          {
+            "from": "late_deliveries",
+            "to": "sick_days_monthly",
+            "effect": "positive",
+            "strength": "weak",
+            "note": "Stress from late deliveries compounds burnout"
+          }
+        ],
+        "scenarios": [
+          {
+            "id": "remove_d2",
+            "label": "Remove D2, Keep 6 Drivers",
+            "color": "#22C55E",
+            "changes": {
+              "driver_count": { "value": 6 },
+              "overtime_hours": { "value": 1.2, "min": 0.8, "max": 4.0 },
+              "late_deliveries": { "value": 1.0, "min": 0.3, "max": 5.0 },
+              "deliveries_per_driver": { "value": 10.0, "min": 6, "max": 15 },
+              "sick_days_monthly": { "value": 1.5, "min": 0.5, "max": 7 }
+            },
+            "assumptions": [
+              "D2 removed \u2014 6 of 11 sick days and 3.4 late deliveries/day eliminated",
+              "Remaining 6 drivers absorb D2's routes with modest overtime increase",
+              "Fleet reliability improves as worst performer is removed"
+            ]
+          },
+          {
+            "id": "nothing",
+            "label": "Keep All 7 Drivers",
+            "color": "#6B7280",
+            "changes": {},
+            "assumptions": [
+              "Current staffing and performance trends continue",
+              "D2 performance issues remain unaddressed"
+            ]
+          }
+        ],
+        "outcome": {
+          "id": "monthly_operating_cost",
+          "label": "Monthly Operating Cost",
+          "unit": "\u20ac/month",
+          "formula": "driver_count * 3200 + overtime_hours * driver_count * 42 * 22 + late_deliveries * 105 * 22 + sick_days_monthly * 320",
+          "direction": "lower_is_better",
+          "positiveLabel": "Cost Savings",
+          "negativeLabel": "Cost Increase"
+        },
+        "recommendation": {
+          "action": "Remove D2. They account for 55% of all sick days and their late delivery rate is 3\u00d7 the fleet average. The remaining 6 drivers can absorb the workload with only a modest overtime increase.",
+          "watch": "D3's overtime is already elevated at 1.8h/day. With D2's routes redistributed, monitor D3 closely \u2014 if their overtime exceeds 2.5h/day, they could follow D2's burnout trajectory.",
+          "trigger": "If any remaining driver's late delivery rate exceeds 2 per day for two consecutive weeks, stop and redistribute routes. That's the pattern that preceded D2's collapse."
+        }
+      }
+    }
+  },
+  "stopReason": "end_turn",
+  "usage": {
+    "inputTokens": 9400,
+    "outputTokens": 3200
+  }
+}

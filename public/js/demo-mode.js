@@ -19,6 +19,7 @@
   var originalFetch = window.fetch;
   var responses = null; // loaded async
   var analysisServed = false;
+  var simulationServedCount = 0;
 
   function jsonResponse(data) {
     return new Response(JSON.stringify(data),
@@ -79,12 +80,33 @@
               }
 
               if (isSimulation) {
-                // Override sim card label — pre-saved data is always fleet reduction
-                if (typeof Dashboard !== 'undefined') {
-                  Dashboard._lastSimulationPrompt = 'What happens if I reduce the fleet from 7 drivers to 5?';
+                if (simulationServedCount === 0) {
+                  // First simulation — pre-saved fleet reduction
+                  if (typeof Dashboard !== 'undefined') {
+                    Dashboard._lastSimulationPrompt = 'What happens if I reduce the fleet from 7 drivers to 5?';
+                  }
+                  console.log('[Demo] Serving simulation response (first)');
+                  simulationServedCount++;
+                  resolve(jsonResponse(responses[1]));
+                } else if (responses[2]) {
+                  // Follow-up simulation — extract label from user's typed text
+                  if (typeof Dashboard !== 'undefined' && typeof lastContent === 'string') {
+                    var rawText = lastContent
+                      .replace(/\[NEW SIMULATION[^\]]*\]\s*/g, '')
+                      .replace(/\s*\[SIMULATION CONTEXT[^\]]*\]/g, '');
+                    if (rawText.trim()) {
+                      Dashboard._lastSimulationPrompt = rawText.trim();
+                    }
+                  }
+                  console.log('[Demo] Serving followup simulation response');
+                  simulationServedCount++;
+                  resolve(jsonResponse(responses[2]));
+                } else {
+                  // Fallback: re-serve first simulation (followup JSON missing or failed)
+                  console.log('[Demo] Serving simulation response (fallback)');
+                  simulationServedCount++;
+                  resolve(jsonResponse(responses[1]));
                 }
-                console.log('[Demo] Serving simulation response');
-                resolve(jsonResponse(responses[1]));
                 return;
               }
 
@@ -147,12 +169,17 @@
   };
 
   // 3. Load response JSONs async (using original fetch — won't be intercepted)
+  //    Third fetch has isolated .catch() — missing followup JSON won't kill the demo
   Promise.all([
     originalFetch('/demo-data/analysis-response.json').then(function(r) { return r.json(); }),
-    originalFetch('/demo-data/simulation-response.json').then(function(r) { return r.json(); })
-  ]).then(function(pair) {
-    responses = [pair[0], pair[1]];
-    console.log('[Demo] Response JSONs loaded:', responses.length, 'responses');
+    originalFetch('/demo-data/simulation-response.json').then(function(r) { return r.json(); }),
+    originalFetch('/demo-data/followup-response.json').then(function(r) { return r.json(); }).catch(function() {
+      console.warn('[Demo] followup-response.json not found — follow-up sim disabled');
+      return null;
+    })
+  ]).then(function(trio) {
+    responses = [trio[0], trio[1], trio[2]]; // responses[2] may be null
+    console.log('[Demo] Response JSONs loaded:', responses.filter(Boolean).length, 'responses');
   }).catch(function(err) {
     console.error('[Demo] Failed to load response JSONs:', err);
   });
