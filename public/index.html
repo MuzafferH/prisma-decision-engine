@@ -448,24 +448,23 @@
     .showcase-dot {
       font-family: var(--font-mono);
       font-size: 10px;
-      color: var(--text3);
+      color: var(--text2);
       background: transparent;
-      border: 1px solid rgba(245, 192, 192, 0.35);
+      border: 1px solid rgba(245, 192, 192, 0.45);
       border-radius: 12px;
       padding: 4px 12px;
       cursor: pointer;
       transition: all 0.3s ease;
-      opacity: 0.6;
     }
     .showcase-dot:hover {
-      opacity: 0.9;
       border-color: var(--rose);
+      background: rgba(245, 192, 192, 0.1);
     }
     .showcase-dot.active {
       background: rgba(245, 192, 192, 0.2);
       border-color: var(--rose);
       color: var(--text);
-      opacity: 1;
+      font-weight: 600;
     }
     .showcase-realtime {
       font-family: var(--font-mono);
@@ -523,24 +522,23 @@
     .screenshot-dot {
       font-family: var(--font-mono);
       font-size: 10px;
-      color: var(--text3);
+      color: var(--text2);
       background: transparent;
-      border: 1px solid rgba(245, 192, 192, 0.35);
+      border: 1px solid rgba(245, 192, 192, 0.45);
       border-radius: 12px;
       padding: 4px 12px;
       cursor: pointer;
       transition: all 0.3s ease;
-      opacity: 0.6;
     }
     .screenshot-dot:hover {
-      opacity: 0.9;
       border-color: var(--rose);
+      background: rgba(245, 192, 192, 0.1);
     }
     .screenshot-dot.active {
       background: rgba(245, 192, 192, 0.2);
       border-color: var(--rose);
       color: var(--text);
-      opacity: 1;
+      font-weight: 600;
     }
     .screenshot-label {
       font-family: var(--font-mono);
@@ -740,8 +738,10 @@
       font-weight: 700;
       color: var(--text);
       line-height: 1.1;
+      min-height: 2.4em;
       margin-bottom: 8px;
       letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
       position: relative;
     }
 
