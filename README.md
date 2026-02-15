@@ -13,6 +13,7 @@ PRISMA is a decision intelligence engine that puts probabilistic decision suppor
 > Built for the **"Built with Opus 4.6" Claude Code Hackathon**, Feb 2026.
 
 **Live:** [prisma-decision-engine.vercel.app](https://prisma-decision-engine.vercel.app)
+**[Watch the 3-min demo →](https://www.youtube.com/watch?v=wB3x6xUImqQ)**
 
 ---
 
